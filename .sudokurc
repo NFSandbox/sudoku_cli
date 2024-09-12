@@ -1,0 +1,11 @@
+alias create n newgame
+alias create t test
+alias create sh show
+alias create so solve
+alias create q quit
+alias create e export
+alias create hh help -v
+alias create h help
+alias create al alias list
+alias create p put
+alias create c check
