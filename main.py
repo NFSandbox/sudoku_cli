@@ -6,6 +6,7 @@ from cmd2 import Settable, Statement
 from cmd2 import Cmd2ArgumentParser, with_argparser, with_argument_list
 from rich import print as rprint
 from rich.markdown import Markdown
+from rich.align import Align
 
 from sudokutools.generate import generate
 from sudokutools.solve import bruteforce, init_candidates
@@ -52,7 +53,7 @@ help_info = """
 
 [bold]Usages Of Helps[/bold]:
 - help -v / hh      Show detailed help of all commands.
-- help \[command]    Show help of a certain command.
+- help \\[command]    Show help of a certain command.
 [/blue]
 """
 
@@ -63,7 +64,7 @@ newgame_args.add_argument(
     "--difficulty",
     help="Set the difficultly of the newly generated game. "
     "Should be a float number between 0 and 1, "
-    "larger number will lead to more empty block, thus, a more challenging game.",
+    "larger number will lead to more empty blocks, thus, a more challenging game.",
     type=float,
     default=0.5,
 )
@@ -380,13 +381,29 @@ class SudokuCli(cmd2.Cmd):
 
         if args.candidates:
             init_candidates(self.sudoku)
-            rprint(
-                view(
-                    self.sudoku, candidate_prefix="*", candidate_style="green not bold"
-                )
+        rprint(Align("[b]Current Sudoku[/b]", align="center"))
+        rprint(
+            Align(
+                f"{view(
+                    self.sudoku,
+                    include_candidates=args.candidates or False,
+                    candidate_prefix="*",
+                    candidate_style="green not bold",
+                )}",
+                align="center",
+            ),
+        )
+
+        # calculate filled block
+        filled = 0
+        for _ in self.sudoku.filled():
+            filled += 1
+        rprint(
+            Align(
+                f"Filled: \\[{filled}]/[white]81[/white] [i not b]({filled*100/81:.2f}%)[/i not b]",
+                align="center",
             )
-        else:
-            rprint(view(self.sudoku, include_candidates=False))
+        )
 
         rprint(help_info)
 
