@@ -19,6 +19,7 @@ Author: Oyasumi, [blue]AHU, Software Engineering[/blue]
 > [bold blue]sudokutools[/bold blue] Sudoku basic algorithm support in Python.
 > [bold blue]cmd2[/bold blue] Tools to create CLI with Python.
 
+Run [bold green]help[/bold green] to check all available commands.
 """
 
 # args for newgame
