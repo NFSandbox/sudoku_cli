@@ -8,3 +8,4 @@ alias create h help
 alias create al alias list
 alias create p put
 alias create c check
+alias create l loadgame
