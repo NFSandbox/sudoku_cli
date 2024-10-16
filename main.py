@@ -5,13 +5,14 @@ import cmd2
 from cmd2 import Settable, Statement
 from cmd2 import Cmd2ArgumentParser, with_argparser, with_argument_list
 from rich import print as rprint
+from rich.markdown import Markdown
 
 from sudokutools.generate import generate
 from sudokutools.solve import bruteforce, init_candidates
 from sudokutools.analyze import find_conflicts
 from sudokutools.sudoku import Sudoku
 
-startup_info = """
+startup_info_backup = """
 [bold]Sudoku CLI[/bold]
 Author: Yujia, Ruofan, [blue]AHU, Software Engineering[/blue]
 
@@ -23,13 +24,35 @@ Run [bold green]help[/bold green] to check all available commands.
 Run [bold blue]newgame[/bold blue] to start a new game!
 """
 
+startup_info = """
+# CLI Sudoku Game
+
+## Author
+
+**Yujia**, **Ruofan**  _AHU, Software Engineering_
+
+## Thanks
+
+- `sudokutools` Sudoku basic algorithm support in Python.
+- `cmd2` Tools to create CLI with Python.
+
+---------------------------------------------------
+
+- Run `help` to check all available commands.
+- Run `newgame` to start a new game!
+"""
+
 help_info = """
 [blue]
-[bold]Quick Help[/bold]:
-- put / p     Put new number in blocks.
-- show / sh   Show current game.
-- show -c     Show current game with candidates hint.
-- solve       Show the possible solve of current game.
+[bold]Command Cheatsheet[/bold]:
+- put / p           Put new number in blocks.
+- show / sh         Show current game.
+- show -c           Show current game with candidates hint.
+- solve             Show the possible solve of current game.
+
+[bold]Usages Of Helps[/bold]:
+- help -v / hh      Show detailed help of all commands.
+- help \[command]    Show help of a certain command.
 [/blue]
 """
 
@@ -38,8 +61,9 @@ newgame_args = Cmd2ArgumentParser()
 newgame_args.add_argument(
     "-d",
     "--difficulty",
-    help="Set the difficultly of the newly generated game."
-    "Should be a float number between 0 and 1",
+    help="Set the difficultly of the newly generated game. "
+    "Should be a float number between 0 and 1, "
+    "larger number will lead to more empty block, thus, a more challenging game.",
     type=float,
     default=0.5,
 )
@@ -85,6 +109,13 @@ show_args.add_argument(
     action="store_true",
     help="Show chandidates of not filled position",
 )
+show_args.add_argument(
+    "-p",
+    "--perserve-terminal",
+    required=False,
+    action="store_true",
+    help="Do not clear terminal before showing the sudoku",
+)
 
 loadgame_args = Cmd2ArgumentParser()
 loadgame_args.add_argument(
@@ -99,6 +130,7 @@ def view(
     number_sep=None,
     candidate_prefix="*",
     align_right=True,
+    candidate_style: str | None = None,
 ):
     """Return sudoku as a human-readable string.
 
@@ -252,6 +284,10 @@ def view(
             else:
                 val = val.ljust(max_field_length)
 
+            # add candidate style
+            if candidate_style is not None and val.strip().startswith(candidate_prefix):
+                val = f"[{candidate_style}]{val}[/{candidate_style}]"
+
             col_str.append(val)
             if (cc + 1) % sudoku.width == 0 and cc < field_count - 1:
                 col_str.append("┃")
@@ -290,7 +326,7 @@ class SudokuCli(cmd2.Cmd):
         super().__init__(startup_script=".sudokurc", silence_startup_script=True)
 
         # print startup info
-        rprint(startup_info)
+        rprint(Markdown(startup_info))
 
         # Add settable game file
         self.add_settable(
@@ -327,20 +363,28 @@ class SudokuCli(cmd2.Cmd):
         """
         Create a new game
         """
+        self.do_cls()
         difficulty = args.difficulty
         rprint(f"Generating new game with difficulty {difficulty}")
         self.sudoku = generate((1 - difficulty) * 81)
         rprint("[green]New sudoku game generated![/green]")
-        self.do_show("")
+        self.do_show("-p")
 
     @with_argparser(show_args)
     def do_show(self, args):
         """
         Show current game
         """
+        if not args.perserve_terminal:
+            self.do_cls()
+
         if args.candidates:
             init_candidates(self.sudoku)
-            rprint(view(self.sudoku))
+            rprint(
+                view(
+                    self.sudoku, candidate_prefix="*", candidate_style="green not bold"
+                )
+            )
         else:
             rprint(view(self.sudoku, include_candidates=False))
 
@@ -366,10 +410,12 @@ class SudokuCli(cmd2.Cmd):
         """
         Export sudoku game
         """
+        self.do_show("")
         if args.single_line:
             rprint(self.sudoku.encode())
             return
-        rprint(self.sudoku.encode(args.rowsep, args.colsep))
+        rprint(self.sudoku.encode(str(args.rowsep).replace("\\n", "\n"), args.colsep))
+        rprint("[green]Game exported[/green]")
 
     def do_check(self, args):
         """
