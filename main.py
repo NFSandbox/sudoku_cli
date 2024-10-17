@@ -1,14 +1,22 @@
+import tools.pyreadline_override
+
 import sys
 import os
 
+import pyreadline3
+
+from typing import Optional, List, Iterable
+
 import cmd2
-from cmd2 import Settable, Statement
+from cmd2 import Settable, Statement, utils
 from cmd2 import (
     Cmd2ArgumentParser,
     with_argparser,
     with_argument_list,
     with_default_category,
 )
+import argparse
+
 from rich import print as rprint
 from rich.markdown import Markdown
 from rich.align import Align
@@ -48,16 +56,21 @@ startup_info = """
 
 ---------------------------------------------------
 
-- Run `help` to check all available commands.
+- Run `help` to check all available commands. _(`help -v` for detailed info)_
 - Run `newgame` to start a new game!
 """
 
 
 class SudokuCLIApplication(cmd2.Cmd):
     def __init__(self):
-
-        super().__init__(startup_script=".sudokurc", silence_startup_script=True)
-
+        super().__init__(
+            startup_script=".sudokurc",
+            silence_startup_script=True,
+            # persistent_history_file='./history'
+        )
+        rprint(f"sys.stdin.isatty()={sys.stdin.isatty()}")
+        self.prompt = "Sudoku CLI > "
+        self.use_rawinput = True
         # print startup info
         rprint(Markdown(startup_info))
 
