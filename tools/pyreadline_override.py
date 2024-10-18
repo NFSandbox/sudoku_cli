@@ -28,9 +28,10 @@ def _update_line(self):
 
     x, y = c.pos()  # Preserve one line for Asian IME(Input Method Editor) statusbar
     w, h = c.size()
-    if (y >= h - 1 + 1) or (n > 0):  # FIX HERE
-        c.scroll_window(-1)
-        c.scroll((0, 0, w, h), 0, -1)
+    if (y >= h - 1) or (n > 0):  # FIX HERE
+        # c.scroll_window(-1)
+        # c.scroll((0, 0, w, h), 0, -1)
+        c.write("\n") # FIX HERE
         n += 1
 
     self._update_prompt_pos(n)

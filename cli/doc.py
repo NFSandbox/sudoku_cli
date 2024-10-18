@@ -36,10 +36,10 @@ class DocCLI(cmd2.CommandSet):
         doc_file_path = doc_name_file_mapping.get(doc_name, None)
 
         if doc_file_path is None:
-            rprint(f"[bold red]Document {doc_name} not found.[/bold red]")
+            self._cmd.perror(f"Document {doc_name} not found.")
             return
 
         with open(doc_file_path, "r", encoding="utf-8") as f:
             doc_content = f.read()
 
-        rprint(Markdown(doc_content))
+        self._cmd.poutput(Markdown(doc_content))

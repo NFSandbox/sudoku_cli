@@ -1,6 +1,8 @@
 import sys
 import os
-if os.name == 'nt':
+
+# monkey patch for scrolling behaviour issue (win only)
+if os.name == "nt":
     import pyreadline3
     import tools.pyreadline_override
 
@@ -14,9 +16,10 @@ from cmd2 import (
     with_argument_list,
     with_default_category,
 )
-import argparse
 
-import pyperclip
+from loguru import logger
+
+logger.disable("tools")
 
 from rich import print as rprint
 from rich.markdown import Markdown
@@ -29,6 +32,8 @@ from sudokutools.sudoku import Sudoku
 
 from cli import doc
 from cli.category import get_category_str
+
+from tools.cmd2_rich_mixin import RichCmd
 
 
 startup_info_backup = """
@@ -58,24 +63,27 @@ startup_info = """
 ---------------------------------------------------
 
 - Run `help` to check all available commands. _(`help -v` for detailed info)_
-- Run `newgame` to start a new game!
+- Run `doc intro` to view the basic introductions.
+- Run `newgame` to start a new game! _have a good time!_
 """
 
 
-class SudokuCLIApplication(cmd2.Cmd):
+class SudokuCLIApplication(RichCmd, cmd2.Cmd):
     def __init__(self):
         super().__init__(
             startup_script=".sudokurc",
             silence_startup_script=True,
             # persistent_history_file='./history'
         )
-        rprint(f"sys.stdin.isatty()={sys.stdin.isatty()}")
+        self.poutput(f"sys.stdin.isatty()={sys.stdin.isatty()}")
         self.prompt = "Sudoku CLI > "
         self.use_rawinput = True
         # print startup info
         rprint(Markdown(startup_info))
 
         # hide unused command provided by cmd2
+        if not hasattr(self, "hidden_commands"):
+            self.hidden_commands = []
         self.hidden_commands.extend(
             [
                 "edit",

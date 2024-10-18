@@ -1,59 +1,32 @@
 from sudokutools.sudoku import Sudoku
-from sudokutools.solve import init_candidates
-from rich import print as rprint
 
 
 def view(
     sudoku: Sudoku,
     include_candidates=True,
-    number_sep=None,
     candidate_prefix="*",
     align_right=True,
+    candidate_style: str | None = None,
+    index_style: str = "yellow not b",
 ):
-    """Return sudoku as a human-readable string.
+    """Return a rich.print renderable string of a sudoku.
 
     Args:
-        sudoku: The sudoku to represent.
-        include_candidates (bool): include candidates (or not)
-        number_sep (str): separator for candidates. If set to None, this
-                          set to ',', if there are numbers > 9 in the sudoku.
-                          Otherwise it will be the empty string.
-        candidate_prefix (str): A string preceding the candidates. This is
-                                used to mark output as candidates (for example
-                                to recognize naked singles).
-        align_right (bool): Align field content to the right
-                            (will be left-aligned, if set to False).
+        sudoku (Sudoku): _The sudoku instance_
+        include_candidates (bool, optional):
+            Include candidates info of the sudoku.
+            Defaults to True.
+        candidate_prefix (str, optional):
+            Prefix used to indicate a grid is displaying candiates. Defaults to "*".
+        align_right (bool, optional): _description_. Defaults to True.
+        candidate_style (str | None, optional):
+            Markup stype of candidates.
+        index_style (str, optional):
+            Markup style of row&column index number.
+            Should be a valid `rich` markup.
 
     Returns:
-        str: String representing the sudoku.
-
-    Example::
-
-        >>> from sudokutools.solve import init_candidates
-        >>> from sudokutools.sudoku import Sudoku, view
-        >>> sudoku = Sudoku.decode('''
-        ... 003020600
-        ... 900305001
-        ... 001806400
-        ... 008102900
-        ... 700000008
-        ... 006708200
-        ... 002609500
-        ... 800203009
-        ... 005010300''')
-        >>> init_candidates(sudoku)
-        >>> print(view(sudoku)) # doctest: +NORMALIZE_WHITESPACE
-            *45   *4578       3 |     *49       2    *147 |       6   *5789     *57
-              9  *24678     *47 |       3     *47       5 |     *78    *278       1
-            *25    *257       1 |       8     *79       6 |       4  *23579   *2357
-        ------------------------+-------------------------+------------------------
-           *345    *345       8 |       1   *3456       2 |       9  *34567  *34567
-              7 *123459     *49 |    *459  *34569      *4 |      *1  *13456       8
-          *1345  *13459       6 |       7   *3459       8 |       2   *1345    *345
-        ------------------------+-------------------------+------------------------
-           *134   *1347       2 |       6    *478       9 |       5   *1478     *47
-              8   *1467     *47 |       2    *457       3 |     *17   *1467       9
-            *46   *4679       5 |      *4       1     *47 |       3  *24678   *2467
+        str: A `rich` renderable string with style markup used.
     """
 
     max_length = max([len(str(n)) for n in sudoku.numbers])
@@ -77,7 +50,7 @@ def view(
             if length > max_field_length:
                 max_field_length = length
 
-    dash_count = sudoku.width + 5 + sudoku.width * max_field_length
+    # dash_count = sudoku.width + 5 + sudoku.width * max_field_length
 
     # create main tick breaker
     # rule = "━" * dash_count + "╋"
@@ -87,6 +60,13 @@ def view(
     #     rule += "━" * (max_field_length)
     # rule += "━" * dash_count
     # rule = f"┣{rule}┫\n"
+
+    # generate row indices
+    row_indices = "   "
+    for i in range(1, 10):
+        row_indices += f"{str(i).center(max_field_length+3)}"
+
+    row_indices = f"[{index_style}]{row_indices}[/{index_style}]"
 
     rule = ""
     for i in range(sudoku.width - 1):
@@ -107,10 +87,10 @@ def view(
     rule += "━" * (max_field_length + 2)
     rule = f"┣{rule}┫\n"
 
-    first_rule = (
+    first_rule = "  " + (
         rule.replace("┣", "┏").replace("┫", "┓").replace("╋", "┳").replace("┿", "┯")
     )
-    last_rule = (
+    last_rule = "  " + (
         rule.replace("┣", "┗").replace("┫", "┛").replace("╋", "┻").replace("┿", "┷")
     )
     # thin_rule = (
@@ -162,35 +142,32 @@ def view(
             else:
                 val = val.ljust(max_field_length)
 
+            # add candidate style
+            if candidate_style is not None and val.strip().startswith(candidate_prefix):
+                val = f"[{candidate_style}]{val}[/{candidate_style}]"
+
             col_str.append(val)
             if (cc + 1) % sudoku.width == 0 and cc < field_count - 1:
                 col_str.append("┃")
             elif (cc + 1) < 9:
                 col_str.append("│")
 
-        final_col_str = ["┃"] + col_str + ["┃"]
+        # add column index and border
+        final_col_str = (
+            [f"[{index_style}]{str(rc + 1)}[/{index_style}]"] + ["┃"] + col_str + ["┃"]
+        )
 
         s += " ".join(final_col_str)
 
         if rc < field_count - 1:
             s += "\n"
 
+        s += "  "
         if (rc + 1) % sudoku.height == 0 and rc < field_count - 1:
             s += rule
         elif (rc + 1) < 9:
             s += thin_rule
 
-    s = f"{first_rule}{s}\n{last_rule}"
+    s = f"{row_indices}\n{first_rule}{s}\n{last_rule}"
 
     return s
-
-
-def main():
-    test_sudoku = Sudoku.decode(
-        "070040000090017003206938000623100097700309068000476352500091806000760005002850039"
-    )
-    init_candidates(test_sudoku)
-    rprint(view(test_sudoku, include_candidates=True, candidate_prefix=">"))
-
-
-main()

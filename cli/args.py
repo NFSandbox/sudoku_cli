@@ -1,4 +1,5 @@
 from cmd2 import Cmd2ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter
 from typing import Literal
 
 __all__ = [
@@ -11,7 +12,9 @@ __all__ = [
 ]
 
 # args for newgame
-newgame_args = Cmd2ArgumentParser()
+newgame_args = Cmd2ArgumentParser(
+    formatter_class=ArgumentDefaultsHelpFormatter
+)
 newgame_args.add_argument(
     "-d",
     "--difficulty",
