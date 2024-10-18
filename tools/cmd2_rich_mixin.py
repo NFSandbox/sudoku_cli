@@ -8,11 +8,17 @@ rich.print as the output function.
 """
 
 import sys
+from cmd2 import ansi
 from typing import Any, IO
+from functools import partial
 
 from loguru import logger
 
 from rich import print as rprint
+from rich import get_console
+from rich.console import Console, ConsoleRenderable
+from rich.text import Text
+from rich.highlighter import RegexHighlighter, ReprHighlighter
 
 from typing import (
     Protocol,
@@ -73,21 +79,41 @@ class RichCmd(Cmd2PrintProtocol):
         super(Cmd2PrintProtocol, self).__init__(*args, **kwargs)
         self._monkey_patch_cmd2_arg_parser_print()
 
+    @staticmethod
+    def _get_console(file: IO[Any] | None = None):
+        return Console(file=file or sys.stdout)
+
     def poutput(
         self, msg: Any = "", *, end: str = "\n", file: IO[str] | None = None
     ) -> None:
-        rprint(msg, end=end, file=file)
-        return None
+
+        # get rich console
+        # always use sys.stdout, so that rich could have the ability to
+        # determine the output type and auto strip ANSI sequence when redirect to
+        # file etc.
+        write_console = self._get_console()
+
+        # if currently redirecting to
+        # if ansi.allow_style == ansi.AllowStyle.TERMINAL and (not sys.stdout.isatty()):
+        #     msg_text = Text.from_markup(msg)
+        #     msg = msg_text.plain
+
+        return write_console.print(msg, end=end)
         # return super(Cmd2PrintProtocol, self).poutput(msg, end=end)
+
+    def _get_self(self):
+        return self
 
     def perror(
         self, msg: Any = "", *, end: str = "\n", apply_style: bool = True
     ) -> None:
-        rprint(f"[red]{msg}[/red]", file=sys.stderr)
+        self._get_console(sys.stderr).print(f"[red]{msg}[/red]", end=end)
         # return super().perror(msg, end=end, apply_style=apply_style)
-    
-    def pwarning(self, msg: Any = "", *, end: str = "\n", apply_style: bool = True) -> None:
-        rprint(f"[yellow]{msg}[/yellow]", file=sys.stderr)
+
+    def pwarning(
+        self, msg: Any = "", *, end: str = "\n", apply_style: bool = True
+    ) -> None:
+        rprint(f"[yellow]{msg}[/yellow]", file=sys.stderr, end=end)
         # return super().pwarning(msg, end=end, apply_style=apply_style)
 
     # def pexcept(self, msg: Any, *, end: str = "\n", apply_style: bool = True) -> None:
@@ -96,11 +122,29 @@ class RichCmd(Cmd2PrintProtocol):
     #     else:
     #         super().pexcept(msg, end=end, apply_style=apply_style)
 
-    def _print_message(self, message: str, file: IO[str] | None = None) -> None:
-        "Monkey patching method for cmd2 parser"
-        self.poutput(message, file=file)
+    def _print_message(
+        self, _arg_parser_self, message: str, file: IO[str] | None = None
+    ) -> None:
+        """
+        Monkey patching method for cmd2 parser
+        """
+        try:
+            # preprocess of messages received
+            # notice that that could be some ANSI sequences in msg
+            message = Text.from_ansi(message, no_wrap=True)
+            message = ReprHighlighter()(message)
+
+            # determine whether poutput or perror is used
+            if file.name == "<stderr>":
+                self.perror(message, end="\n")
+            else:
+                self.poutput(message, end="\n")
+        except Exception as e:
+            self.perror(f"Error occurred while printing a error message. {e}")
 
     def _monkey_patch_cmd2_arg_parser_print(self):
         import cmd2.argparse_custom
 
-        cmd2.argparse_custom.Cmd2ArgumentParser._print_message = self._print_message
+        cmd2.argparse_custom.Cmd2ArgumentParser._print_message = partial(
+            self._print_message, self
+        )

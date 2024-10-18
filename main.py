@@ -6,6 +6,9 @@ if os.name == "nt":
     import pyreadline3
     import tools.pyreadline_override
 
+# monkey patch system prefered encoding
+# from tools import sys_encoding_override
+
 from typing import Optional, List, Iterable
 
 import cmd2

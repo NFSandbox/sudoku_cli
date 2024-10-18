@@ -13,7 +13,7 @@ __all__ = [
 
 # args for newgame
 newgame_args = Cmd2ArgumentParser(
-    formatter_class=ArgumentDefaultsHelpFormatter
+    # formatter_class=ArgumentDefaultsHelpFormatter
 )
 newgame_args.add_argument(
     "-d",
