@@ -1,5 +1,6 @@
 import sys
 import os
+from copy import copy, deepcopy
 
 import cmd2
 from cmd2 import Settable, Statement, with_default_category
@@ -240,7 +241,20 @@ class SudokuCLI(cmd2.CommandSet):
     """
 
     game_file: str = "./sudoku_cli.json"
-    sudoku: Sudoku = generate()
+
+    def __init__(self):
+        super().__init__()
+        self.sudoku: Sudoku
+        """
+        Sudoku instance that store the currently ongoing game.
+        """
+
+        self.init_sudoku: Sudoku
+        """
+        Sudoku used to record the init state of a game.
+        """
+
+        self.create_new_game(0.5)
 
     @with_argparser(loadgame_args)
     def do_loadgame(self, args):
@@ -262,9 +276,18 @@ class SudokuCLI(cmd2.CommandSet):
         self.do_cls()
         difficulty = args.difficulty
         rprint(f"Generating new game with difficulty {difficulty}")
-        self.sudoku = generate((1 - difficulty) * 81)
+        self.create_new_game(difficulty=difficulty)
         rprint("[green]New sudoku game generated![/green]")
         self.do_show("-p")
+    
+    def create_new_game(self, difficulty: int):
+        """
+        Create a new sudoku game.
+        """
+        factor = (1 - difficulty) * 81
+
+        self.sudoku = generate(factor)
+        self.init_sudoku = deepcopy(self.sudoku)
 
     @with_argparser(show_args)
     def do_show(self, args):
@@ -368,6 +391,11 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Put or update a box of the sudoku
         """
+        # check if this grid is an initial grid
+        if self.init_sudoku[args.row - 1, args.column - 1] != 0:
+            rprint('[yellow]Do not change the generated grid[/yellow]')
+            return
+
         self.sudoku[args.row - 1, args.column - 1] = args.value
         self.do_show("")
         self.do_check("")

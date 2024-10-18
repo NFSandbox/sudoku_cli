@@ -1,9 +1,8 @@
-import tools.pyreadline_override
-
 import sys
 import os
-
-import pyreadline3
+if os.name == 'nt':
+    import pyreadline3
+    import tools.pyreadline_override
 
 from typing import Optional, List, Iterable
 
@@ -16,6 +15,8 @@ from cmd2 import (
     with_default_category,
 )
 import argparse
+
+import pyperclip
 
 from rich import print as rprint
 from rich.markdown import Markdown
@@ -73,11 +74,6 @@ class SudokuCLIApplication(cmd2.Cmd):
         self.use_rawinput = True
         # print startup info
         rprint(Markdown(startup_info))
-
-        # Add settable game file
-        self.add_settable(
-            Settable("game_file", str, "Path to store the game data file", self)
-        )
 
         # hide unused command provided by cmd2
         self.hidden_commands.extend(
