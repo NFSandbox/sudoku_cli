@@ -43,9 +43,13 @@ class SudokuCLI(cmd2.CommandSet):
 
     game_file: str = "./sudoku_cli.json"
 
-    def __init__(self):
+    candidate_style = "green not bold"
+    init_style = "white not bold"
+    style = "cyan bold"
+
+    def __init__(self) -> None:
         super().__init__()
-        
+        self._cmd: cmd2.Cmd
         self.sudoku: Sudoku
         """
         Sudoku instance that store the currently ongoing game.
@@ -82,11 +86,11 @@ class SudokuCLI(cmd2.CommandSet):
         self._cmd.poutput("[green]New sudoku game generated![/green]")
         self.do_show("-p")
 
-    def create_new_game(self, difficulty: int):
+    def create_new_game(self, difficulty: float):
         """
         Create a new sudoku game.
         """
-        factor = (1 - difficulty) * 81
+        factor = int((1 - difficulty) * 81)
 
         self.sudoku = generate(factor)
         self.init_sudoku = deepcopy(self.sudoku)
@@ -99,19 +103,50 @@ class SudokuCLI(cmd2.CommandSet):
         if not args.perserve_terminal:
             self.do_cls()
 
+        candidates_example = ""
         if args.candidates:
             init_candidates(self.sudoku)
+            candidates_example = (
+                f" / [{self.candidate_style}]Candidates[/]"
+                if self.candidate_style is not None
+                else " / Candidates"
+            )
+
+        # titles
         self._cmd.poutput(Align("[b]Current Sudoku[/b]", align="center"))
+
+        # sudokus
         self._cmd.poutput(
             Align(
                 f"{view(
                     self.sudoku,
+                    init_sudoku=self.init_sudoku,
                     include_candidates=args.candidates or False,
                     candidate_prefix="*",
-                    candidate_style="green not bold",
+                    candidate_style=self.candidate_style,
+                    init_style=self.init_style,
+                    style=self.style,
                 )}",
                 align="center",
             ),
+        )
+
+        # examples
+        filled_example = (
+            f"[{self.style}]Filled[/{self.style}]"
+            if self.style is not None
+            else "Filled"
+        )
+        init_example = (
+            f"[{self.init_style}]Original[/{self.init_style}]"
+            if self.init_style is not None
+            else "Original"
+        )
+        self._cmd.poutput(
+            Align(
+                f"{init_example} / {filled_example}{candidates_example}",
+                align="center",
+            )
         )
 
         # calculate filled block

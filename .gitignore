@@ -166,6 +166,8 @@ cython_debug/
 /test*.*
 /history
 /example.py
+/example_decorator.py
+/*_bak.py
 
 # vscode 
 .vscode

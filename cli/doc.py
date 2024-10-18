@@ -22,6 +22,7 @@ from .args import *
 doc_name_file_mapping = {
     "intro": "./docs/sudoku_introduction.md",
     "advance": "./docs/advanced_tutorial.md",
+    "output_redirect": "./docs/output_redirecting.md",
 }
 
 

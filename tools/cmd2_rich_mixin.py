@@ -16,6 +16,7 @@ from loguru import logger
 
 from rich import print as rprint
 from rich import get_console
+from rich.markup import escape
 from rich.console import Console, ConsoleRenderable
 from rich.text import Text
 from rich.highlighter import RegexHighlighter, ReprHighlighter
@@ -97,8 +98,15 @@ class RichCmd(Cmd2PrintProtocol):
         # if ansi.allow_style == ansi.AllowStyle.TERMINAL and (not sys.stdout.isatty()):
         #     msg_text = Text.from_markup(msg)
         #     msg = msg_text.plain
-
-        return write_console.print(msg, end=end)
+        try:
+            return write_console.print(msg, end=end)
+        except Exception as e:
+            try:
+                return write_console.print(
+                    f"Error occurred while printing message. {escape(markup=str(e))}"
+                )
+            except:
+                return write_console.print(f"Error occurred while printing message.")
         # return super(Cmd2PrintProtocol, self).poutput(msg, end=end)
 
     def _get_self(self):
@@ -107,7 +115,12 @@ class RichCmd(Cmd2PrintProtocol):
     def perror(
         self, msg: Any = "", *, end: str = "\n", apply_style: bool = True
     ) -> None:
-        self._get_console(sys.stderr).print(f"[red]{msg}[/red]", end=end)
+        try:
+            self._get_console(sys.stderr).print(f"[red]{msg}[/red]", end=end)
+        except:
+            self._get_console(sys.stderr).print(
+                "[red]Error occurred while printing another error message[/red]"
+            )
         # return super().perror(msg, end=end, apply_style=apply_style)
 
     def pwarning(

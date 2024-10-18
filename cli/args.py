@@ -86,8 +86,9 @@ doc_args.add_argument(
     "doc_name",
     help="""
     The name of the documentation you want to see.
-    - intro:     The basic introduction of this program and the sudoku game.
-    - advance:   Advance usages of this program.
+    - intro:             The basic introduction of this program and the sudoku game.
+    - advance:           Advance usages of this program.
+    - output_redirect:   Guide on how to use output redirection with this program.
     """,
-    choices=["intro", "advance"],
+    choices=["intro", "advance", "output_redirect"],
 )
