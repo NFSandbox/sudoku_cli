@@ -26,6 +26,8 @@ from typing import (
     runtime_checkable,
 )
 
+from exceptions import BaseError
+
 
 class Cmd2PrintProtocol(Protocol):
 
@@ -43,6 +45,14 @@ class Cmd2PrintProtocol(Protocol):
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         """
+
+    def psuccess(
+        self,
+        msg: Any = "",
+        *,
+        end: str = "\n",
+        **kwargs: Any,
+    ) -> None: ...
 
     # noinspection PyMethodMayBeStatic
     def perror(
@@ -133,22 +143,27 @@ class RichCmd(Cmd2PrintProtocol):
                 return write_console.print(f"Error occurred while printing message.")
         # return super(Cmd2PrintProtocol, self).poutput(msg, end=end)
 
-    def _get_self(self):
-        return self
+    def psuccess(
+        self,
+        msg: Any = "",
+        *,
+        end: str = "\n",
+        **kwargs,
+    ) -> None:
+        return self.poutput(msg=f"[green]{msg}[/green]", end=end, **kwargs)
 
     def perror(
         self,
         msg: Any = "",
         *,
         end: str = "\n",
-        apply_style: bool = True,
         **kwargs,
     ) -> None:
         try:
-            try:
-                ansi.strip_style(msg)
-            except:
-                pass
+            # try:
+            #     ansi.strip_style(msg)
+            # except:
+            #     pass
             self._get_console(sys.stderr).print(f"[red]{msg}[/red]", end=end)
         except:
             self._get_console(sys.stderr).print(
@@ -164,14 +179,12 @@ class RichCmd(Cmd2PrintProtocol):
         apply_style: bool = True,
         **kwargs,
     ) -> None:
-        rprint(f"[yellow]{msg}[/yellow]", file=sys.stderr, end=end)
-        # return super().pwarning(msg, end=end, apply_style=apply_style)
+        self.poutput(f"[yellow]{msg}[/yellow]", file=sys.stderr, end=end)
 
-    # def pexcept(self, msg: Any, *, end: str = "\n", apply_style: bool = True) -> None:
-    #     if self.debug and sys.exc_info() != (None, None, None):
-    #         rprint(f"[red]{msg}[/red]")
-    #     else:
-    #         super().pexcept(msg, end=end, apply_style=apply_style)
+    def pexcept(self, msg: Any, *, end: str = "\n", **kwargs: Any) -> None:
+        if not isinstance(msg, BaseError):
+            msg = f"Uncaught error:\n{msg}"
+        return self.perror(msg, end=end, **kwargs)
 
     def _print_message(self, message: str, file: IO[str] | None = None) -> None:
         """

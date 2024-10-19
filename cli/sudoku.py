@@ -10,14 +10,18 @@ from rich.console import RenderableType
 from rich.markdown import Markdown
 from rich.align import Align
 
-from sudokutools.generate import generate
+from sudokutools.generate import generate, generate_from_template
 from sudokutools.solve import bruteforce, init_candidates
 from sudokutools.analyze import find_conflicts
 from sudokutools.sudoku import Sudoku
 
 from .args import *
 from .category import get_category_str
+from .model import SudokuCLIGameData
+
+from exceptions import BaseError
 from tools.sudoku_view import view, CustomViewConfig, SudokuConflictView
+from data.templates import TEMPLATE_DICT
 
 help_info = """
 [blue]
@@ -31,7 +35,18 @@ help_info = """
 - help -v / hh      Show detailed help of all commands.
 - help \\[command]    Show help of a certain command.
 [/blue]
+
+[blue]Enter [b]"quit"[/] or [b]"q"[/] to exit[/blue]
 """
+
+
+class SudokuGenerationError(BaseError):
+    def __init__(
+        self,
+        name: str = "failed_to_generate_sudoku",
+        message: str = "Failed to generated a new sudoku.",
+    ) -> None:
+        super().__init__(name, message)
 
 
 @with_default_category(get_category_str("Sudoku"))
@@ -92,19 +107,57 @@ class SudokuCLI(cmd2.CommandSet):
                 )
             )
 
-        self.create_new_game(0.5)
+        # categorize command
+        cmd2.categorize(self.do_cls, get_category_str("System"))
+
+        self.create_new_game(difficulty=0.5)
 
     @with_argparser(loadgame_args)
-    def do_loadgame(self, args):
+    def do_loadgame(self, args) -> None:
         """
         Load an existing game from a data string
         """
-        self._cmd.poutput(f"Try loading game from string: {args.game_string}")
-        try:
-            self.sudoku = Sudoku.decode(args.game_string)
-            self._cmd.poutput("[green]Game loaded successfully![/green]")
-        except Exception as e:
-            self._cmd.poutput(f"[red]Failed to load game: {e}[/red]")
+        self.do_cls("")
+
+        # if load from file
+        if args.file is not None:
+            file_name = args.file
+
+            self._cmd.poutput(f"Try loading game from file: '{file_name}'")
+
+            # open file
+            try:
+                with open(file_name, "r") as f:
+
+                    # load sudoku
+                    sudoku_game = SudokuCLIGameData.model_validate_json(f.read())
+                    self.sudoku = sudoku_game.sudoku
+
+                    # load init
+                    if sudoku_game.init_sudoku is not None:
+                        self.init_sudoku = sudoku_game.init_sudoku
+                    else:
+                        self.init_sudoku = deepcopy(self.sudoku)
+
+                    self._cmd.psuccess(
+                        f"Game loaded from file '{file_name}' successfully!"
+                    )
+            except Exception as e:
+                self._cmd.perror(f"Failed to load game from file {file_name}: {e}")
+
+        # if load from input string
+        if args.string is not None:
+            game_string: str = args.string
+
+            self._cmd.poutput(f"Try loading game from string")
+            try:
+                self.sudoku = Sudoku.decode(game_string)
+                self.init_sudoku = deepcopy(self.sudoku)
+                self._cmd.psuccess("Game loaded from input string successfully!")
+            except Exception as e:
+                self._cmd.perror(f"Failed to load game from string: {e}")
+
+        self.do_show("-p")
 
     @with_argparser(newgame_args)
     def do_newgame(self, args):
@@ -113,18 +166,62 @@ class SudokuCLI(cmd2.CommandSet):
         """
         self.do_cls()
         difficulty = args.difficulty
+        template = args.template
+        symmetry = args.symmetry
+
+        if template is None and difficulty is None:
+            difficulty = 0.5
+
         self._cmd.poutput(f"Generating new game with difficulty {difficulty}")
-        self.create_new_game(difficulty=difficulty)
-        self._cmd.poutput("[green]New sudoku game generated![/green]")
+        try:
+            self.create_new_game(
+                difficulty=difficulty,
+                template=template,
+                symmetry=symmetry,
+            )
+        except SudokuGenerationError as e:
+            self._cmd.perror(e)
+        else:
+            self._cmd.poutput("[green]New sudoku game generated![/green]")
         self.do_show("-p")
 
-    def create_new_game(self, difficulty: float):
+    def create_new_game(
+        self,
+        *,
+        difficulty: float | None = None,
+        symmetry: str | None = None,
+        template: str | None = None,
+    ):
         """
         Create a new sudoku game.
         """
-        factor = int((1 - difficulty) * 81)
+        if template is not None:
+            if difficulty is not None or symmetry is not None:
+                raise SudokuGenerationError(
+                    "Failed to generate a new sudoku game. "
+                    "'symmetry' and 'difficulty' could not be specified when "
+                    "'template' args is specified."
+                )
 
-        self.sudoku = generate(factor)
+        if template is not None:
+            self._cmd.poutput(
+                "Generate a valid game from template may takes some time, "
+                "please wait for a sec..."
+            )
+            try:
+                self.sudoku = generate_from_template(
+                    Sudoku.decode(TEMPLATE_DICT[template]),
+                    tries=1000,
+                )
+            except Exception as e:
+                raise SudokuGenerationError(
+                    "Failed to generate game using template. " f"{e}"
+                )
+        else:
+            assert difficulty is not None
+            factor = int((1 - difficulty) * 81)
+            self.sudoku = generate(factor, symmetry=symmetry)
+
         self.init_sudoku = deepcopy(self.sudoku)
 
     @with_argparser(show_args)
@@ -241,7 +338,7 @@ class SudokuCLI(cmd2.CommandSet):
             align="center" if centered else "left",
         )
 
-    def do_solve(self, args):
+    def do_solve(self, args) -> None:
         """Show the solution of current sudoku game"""
         solutions = bruteforce(self.sudoku)
 
@@ -263,14 +360,24 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Export sudoku game
         """
-        self.do_show("")
         if args.single_line:
             self._cmd.poutput(self.sudoku.encode())
             return
+
         self._cmd.poutput(
             self.sudoku.encode(str(args.rowsep).replace("\\n", "\n"), args.colsep)
         )
-        self._cmd.poutput("[green]Game exported[/green]")
+
+        # export to file
+        if args.file is not None:
+            try:
+                with open(args.file, "w", encoding="utf8") as f:
+                    f.write(self.export_game().model_dump_json())
+                    self._cmd.psuccess("Game exported to file successfully!")
+            except Exception as e:
+                self._cmd.perror(f"Failed to export game to a file: {e}")
+
+        self._cmd.psuccess("Game exported to terminal successfully!")
 
     def do_check(self, args) -> None:
         """
@@ -320,8 +427,18 @@ class SudokuCLI(cmd2.CommandSet):
         self.do_show("")
         self.do_check("")
 
+    def default(self, args):
+        self._cmd.poutput(str(args))
+
     def do_cls(self, *args, **kwargs):
         """
         Clear all content on screen
         """
         os.system("cls" if os.name == "nt" else "clear")
+
+    def export_game(self) -> SudokuCLIGameData:
+        game_data = SudokuCLIGameData(
+            sudoku=self.sudoku,  # type: ignore
+            init_sudoku=self.init_sudoku or None,  # type: ignore
+        )
+        return game_data
