@@ -34,8 +34,8 @@ from sudokutools.analyze import find_conflicts
 from sudokutools.sudoku import Sudoku
 
 from cli import doc
+from cli import step
 from cli.category import get_category_str
-
 from tools.cmd2_rich_mixin import RichCmd
 
 

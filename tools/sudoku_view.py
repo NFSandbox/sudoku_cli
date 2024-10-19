@@ -1,4 +1,6 @@
 from sudokutools.sudoku import Sudoku
+from sudokutools.analyze import find_conflicts
+from sudokutools.solve import init_candidates
 from typing import Protocol, Any, Sequence, List
 
 from rich.text import Text
@@ -106,6 +108,65 @@ class BasicSudokuViewCustomConfig(CustomViewConfig):
         return max_length
 
 
+class SudokuConflictView(CustomViewConfig):
+    def __init__(self, sudoku: Sudoku, conflict_style: str | None = "red bold") -> None:
+        super(CustomViewConfig, self).__init__()
+        self.sudoku = sudoku
+        self.conflict_style = conflict_style
+        self.conflict_dict: dict[tuple[int, int], bool] | None = None
+
+        self._init_conflict_dict()
+
+    def _ensure_conflict_dict_generated(self) -> None:
+        if self.conflict_dict is None:
+            self._init_conflict_dict()
+
+        assert self.conflict_dict is not None
+
+    def _init_conflict_dict(self) -> None:
+        self.conflict_dict = {}
+        conflicts = find_conflicts(self.sudoku)
+        for c in conflicts:
+            x1 = c[0][0]
+            y1 = c[0][1]
+            self.conflict_dict[x1, y1] = True
+
+    def display_length(self, sudoku_index: tuple[int, int]) -> int:
+        num = self._get_item_number(sudoku_index)
+        if num is None:
+            return 0
+        return len(str(num))
+
+    def _get_item_number(self, sudoku_index: tuple[int, int]) -> int | None:
+        self._ensure_conflict_dict_generated()
+        assert self.conflict_dict is not None
+        if self.conflict_dict.get(sudoku_index, False):
+            return self.sudoku[sudoku_index]
+        return None
+
+    def __getitem__(self, sudoku_index: tuple[int, int]) -> str | None:
+        num = self._get_item_number(sudoku_index)
+
+        if num is None:
+            return None
+
+        item_str = str(num)
+
+        if self.conflict_style is not None:
+            item_str = f"[{self.conflict_style}]{item_str}[/{self.conflict_style}]"
+
+        return item_str
+
+    def max_display_length(self) -> int:
+        max_length = 0
+        assert self.conflict_dict is not None
+        for index in self.conflict_dict.keys():
+            length = self.display_length(index)
+            max_length = max(max_length, length)
+
+        return max_length
+
+
 def view(
     sudoku: Sudoku,
     init_sudoku: Sudoku | None = None,
@@ -117,7 +178,7 @@ def view(
     candidate_style: str | None = None,
     init_style: str | None = "white not bold",
     style: str | None = None,
-):
+) -> str:
     """Return a rich.print renderable string of a sudoku.
 
     Args:
@@ -168,6 +229,8 @@ def view(
     max_field_length = max_length
 
     if include_candidates:
+        # init candidates
+        init_candidates(sudoku=sudoku)
         # get the maximum field length with candidates
         for row, col in sudoku:
             length = len(

@@ -6,6 +6,7 @@ import cmd2
 from cmd2 import Settable, Statement, with_default_category
 from cmd2 import Cmd2ArgumentParser, with_argparser, with_argument_list
 
+from rich.console import RenderableType
 from rich.markdown import Markdown
 from rich.align import Align
 
@@ -16,7 +17,7 @@ from sudokutools.sudoku import Sudoku
 
 from .args import *
 from .category import get_category_str
-from tools.sudoku_view import view
+from tools.sudoku_view import view, CustomViewConfig, SudokuConflictView
 
 help_info = """
 [blue]
@@ -43,10 +44,6 @@ class SudokuCLI(cmd2.CommandSet):
 
     game_file: str = "./sudoku_cli.json"
 
-    candidate_style = "green not bold"
-    init_style = "white not bold"
-    style = "cyan bold"
-
     def __init__(self) -> None:
         super().__init__()
         self._cmd: cmd2.Cmd
@@ -59,6 +56,41 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Sudoku used to record the init state of a game.
         """
+
+        self.candidate_style = "green not bold"
+        """
+        Rich markup style used to highlight candidates grids in grids.
+        """
+        self.init_style = "white not bold"
+        """
+        Rich markup style used to highlight generated grids in grids.
+        """
+        self.conflicts_style = "red bold"
+        """
+        Rich markup style used to highlight conflict grids in grids.
+        """
+        self.style = "cyan bold"
+        """
+        Rich markup style for filled sudoku grids.
+        """
+
+        style_settables = {
+            "init_style": "Rich markup style used to highlight generated grids in grids.",
+            "style": "Rich markup style for filled sudoku grids.",
+            "conflicts_style": "Rich markup style used to highlight conflict grids in grids.",
+            "candidate_style": "Rich markup style used to highlight candidates grids in grids.",
+        }
+
+        # add settable
+        for st_settable, doc in style_settables.items():
+            self.add_settable(
+                Settable(
+                    st_settable,
+                    str,
+                    doc,
+                    self,
+                )
+            )
 
         self.create_new_game(0.5)
 
@@ -103,17 +135,13 @@ class SudokuCLI(cmd2.CommandSet):
         if not args.perserve_terminal:
             self.do_cls()
 
-        candidates_example = ""
-        if args.candidates:
-            init_candidates(self.sudoku)
-            candidates_example = (
-                f" / [{self.candidate_style}]Candidates[/]"
-                if self.candidate_style is not None
-                else " / Candidates"
-            )
-
         # titles
         self._cmd.poutput(Align("[b]Current Sudoku[/b]", align="center"))
+
+        conflict_view_config = SudokuConflictView(
+            sudoku=self.sudoku,
+            conflict_style=self.conflicts_style,
+        )
 
         # sudokus
         self._cmd.poutput(
@@ -126,26 +154,19 @@ class SudokuCLI(cmd2.CommandSet):
                     candidate_style=self.candidate_style,
                     init_style=self.init_style,
                     style=self.style,
-                )}",
+                    custom_view_configs=[conflict_view_config]
+                ).strip('\n')}",
                 align="center",
             ),
+            end="",
         )
 
-        # examples
-        filled_example = (
-            f"[{self.style}]Filled[/{self.style}]"
-            if self.style is not None
-            else "Filled"
-        )
-        init_example = (
-            f"[{self.init_style}]Original[/{self.init_style}]"
-            if self.init_style is not None
-            else "Original"
-        )
+        # legend
         self._cmd.poutput(
-            Align(
-                f"{init_example} / {filled_example}{candidates_example}",
-                align="center",
+            self.get_legend_renderable(
+                contain_candidates_legend=args.candidates,
+                contain_conflicts_legend=conflict_view_config.max_display_length() > 0,
+                centered=True,
             )
         )
 
@@ -155,12 +176,70 @@ class SudokuCLI(cmd2.CommandSet):
             filled += 1
         self._cmd.poutput(
             Align(
-                f"Filled: \\[{filled}]/[white]81[/white] [i not b]({filled*100/81:.2f}%)[/i not b]",
+                f"Filled: {filled}/[white]81[/white] [i not b]({filled*100/81:.2f}%)[/i not b]",
                 align="center",
             )
         )
 
         self._cmd.poutput(help_info)
+
+    def get_legend_renderable(
+        self,
+        *,
+        centered: bool = True,
+        contain_candidates_legend: bool = False,
+        contain_conflicts_legend: bool = False,
+        raw_text: bool = False,
+    ) -> RenderableType:
+        # styled legend texts
+
+        def _gen_legend(
+            text: str,
+            style: str | None = None,
+            add_slash_prefix: bool = False,
+        ) -> str:
+            if style is None:
+                return text
+
+            prefix = ""
+            if add_slash_prefix:
+                prefix = " / "
+            return f"{prefix}[{style}]{text}[/{style}]"
+
+        # Filled
+        filled_example = _gen_legend("Filled", self.style)
+
+        # Init
+        init_example = _gen_legend("Original", self.init_style)
+
+        # Candidates
+        if contain_candidates_legend:
+            candidates_example = _gen_legend(
+                "Candidates", self.candidate_style, add_slash_prefix=True
+            )
+        else:
+            candidates_example = ""
+
+        # Conflicts
+        if contain_conflicts_legend:
+            conflicts_example = _gen_legend(
+                "Conflicts", self.conflicts_style, add_slash_prefix=True
+            )
+        else:
+            conflicts_example = ""
+
+        # construct final markup text
+        markup_text = (
+            f"{init_example} / {filled_example}{conflicts_example}{candidates_example}"
+        )
+
+        if raw_text:
+            return markup_text
+
+        return Align(
+            markup_text,
+            align="center" if centered else "left",
+        )
 
     def do_solve(self, args):
         """Show the solution of current sudoku game"""
@@ -193,7 +272,7 @@ class SudokuCLI(cmd2.CommandSet):
         )
         self._cmd.poutput("[green]Game exported[/green]")
 
-    def do_check(self, args):
+    def do_check(self, args) -> None:
         """
         Check if there's any conflict in current game
         """
