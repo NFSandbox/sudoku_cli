@@ -23,6 +23,7 @@ doc_name_file_mapping = {
     "intro": "./docs/sudoku_introduction.md",
     "advance": "./docs/advanced_tutorial.md",
     "output_redirect": "./docs/output_redirecting.md",
+    "customize": "./docs/game_customize.md",
 }
 
 
@@ -31,6 +32,7 @@ class DocCLI(cmd2.CommandSet):
 
     @with_argparser(doc_args)
     def do_doc(self, args):
+        assert self._cmd is not None
         self._cmd.onecmd_plus_hooks("cls")
 
         doc_name = args.doc_name

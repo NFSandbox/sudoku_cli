@@ -69,7 +69,7 @@ class CustomArgumentParser(Cmd2ArgumentParser):
 
 # args for newgame
 newgame_args = CustomArgumentParser(
-    # formatter_class=ArgumentDefaultsHelpFormatter
+    formatter_class=ArgumentDefaultsHelpFormatter,
 )
 newgame_help_text = """
 Set the difficultly of the newly generated game. Should be a float number between 0 and 1, 
@@ -81,11 +81,28 @@ newgame_args.add_argument(
     "Should be a float number between 0 and 1, "
     "larger number will lead to more empty blocks, thus, a more challenging game.",
     type=float,
-    default=0.5,
+    default=None,
+)
+newgame_args.add_argument(
+    "-s",
+    "--symmetry",
+    choices=("rotate-90", "rotate-180", "mirror-x", "mirror-y", "mirror-xy"),
+    type=str,
+    default=None,
+    help="Specify the symmetry pattern of the new game",
 )
 
+newgame_args.add_argument(
+    "-t",
+    "--template",
+    type=str,
+    default=None,
+    help="Specify the grid template of the new game",
+)
+
+
 # args for export
-export_args = CustomArgumentParser()
+export_args = CustomArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 export_args.add_argument(
     "-r", "--rowsep", help="Separator for rows", type=str, default=""
 )
@@ -97,7 +114,25 @@ export_args.add_argument(
     default="",
 )
 export_args.add_argument(
-    "-s", "--single-line", help="Export game in a single line", action="store_true"
+    "-s",
+    "--single-line",
+    help="Export game in a single line",
+    action="store_true",
+)
+export_args.add_argument(
+    "-f",
+    "--file",
+    required=False,
+    help="""
+    Export game to a file with JSON format.
+    Use 'game.json' if no args followed.
+    Notice that when exporting game to file, the --colsep and --rowsep 
+    option will not be respected.
+    """,
+    type=str,
+    nargs="?",
+    const="./game.json",
+    default=None,
 )
 
 
@@ -133,10 +168,23 @@ show_args.add_argument(
     help="Do not clear terminal before showing the sudoku",
 )
 
-loadgame_args = CustomArgumentParser()
-loadgame_args.add_argument(
-    "game_string",
+loadgame_args = CustomArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+_loadgame_import_source_mutex_arg = loadgame_args.add_mutually_exclusive_group(
+    required=True
+)
+_loadgame_import_source_mutex_arg.add_argument(
+    "-s",
+    "--string",
     help='The string format data of a game. You could export a game to string using "export" command',
+    default=None,
+)
+_loadgame_import_source_mutex_arg.add_argument(
+    "-f",
+    "--file",
+    help="Load game from file. Use 'game.json' if no args followed",
+    nargs="?",
+    const="./game.json",
+    default=None,
 )
 
 
@@ -151,7 +199,7 @@ The name of the documentation you want to see.
 doc_args.add_argument(
     "doc_name",
     help=doc_help_text,
-    choices=["intro", "advance", "output_redirect"],
+    choices=["intro", "advance", "output_redirect", "customize"],
 )
 
 
