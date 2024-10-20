@@ -1,9 +1,20 @@
+from typing import Iterable, Generator
+from abc import ABC, abstractmethod
+
 from sudokutools.sudoku import Sudoku
 from sudokutools.analyze import find_conflicts
 from sudokutools.solve import init_candidates
 from typing import Protocol, Any, Sequence, List
 
 from rich.text import Text
+
+# __all__ = [
+#     CustomViewConfig,
+#     StyledContentCustomViewMixin,
+#     IterableCustomViewConfigMixin,
+#     SudokuCustomViewConfig,
+#     StyledDictCustomViewConfig,
+# ]
 
 
 class CustomViewConfig(Protocol):
@@ -56,7 +67,68 @@ class CustomViewConfig(Protocol):
         ...
 
 
-class BasicSudokuViewCustomConfig(CustomViewConfig):
+class IterableCustomViewConfigMixin(CustomViewConfig):
+    """
+    Automatically calculate max display length by iterating through the indices.
+    """
+
+    @abstractmethod
+    def iter_indices(self) -> Generator[tuple[int, int], Any, Any]:
+        """Iterate the contents of this custom view config"""
+        yield from ()
+
+    def max_display_length(self) -> int:
+        max_len = 0
+        for idx in self.iter_indices():
+            l = self.display_length(idx)
+            max_len = max(l, max_len)
+        return max_len
+
+
+class StyledContentCustomViewMixin(CustomViewConfig):
+
+    style: str | None = None
+    """
+    The default markup style used when content_styler is not instanciated by
+    subclasses."""
+
+    def _get_styled(self, raw_content: str | None) -> str | None:
+        """
+        Return a styled markup string competiable with rich.
+        """
+        if raw_content is None:
+            return None
+
+        if self.style is None:
+            return raw_content
+
+        s = self.style
+
+        return f"[{s}]{raw_content}[/{s}]"
+
+    @abstractmethod
+    def _get_raw_content(self, sudoku_index: tuple[int, int]) -> str | None: ...
+
+    def display_length(self, sudoku_index: tuple[int, int]) -> int:
+        # try get raw content
+        raw = self._get_raw_content(sudoku_index=sudoku_index)
+        # return zero length if no content in this index
+        if raw is None:
+            return 0
+        # return length
+        return len(raw)
+
+    def __getitem__(self, sudoku_index: tuple[int, int]) -> str | None:
+        # get raw content, and return styled if not None
+        raw = self._get_raw_content(sudoku_index)
+        if raw is None:
+            return None
+        return self._get_styled(raw_content=raw)
+
+
+class SudokuCustomViewConfig(
+    IterableCustomViewConfigMixin, StyledContentCustomViewMixin, CustomViewConfig
+):
     """
     Implementations of `ViewCustomConfig` which will showing the sudoku with default style.
 
@@ -68,47 +140,49 @@ class BasicSudokuViewCustomConfig(CustomViewConfig):
     def __init__(
         self,
         sudoku: Sudoku,
-        # do_not_override_init: bool = True,
-        # do_not_override_filled: bool = True,
         style: str | None = "bold white",
     ) -> None:
-        super(CustomViewConfig, self).__init__()
+        super().__init__()
         self.sudoku = sudoku
         # self.do_not_override_init: bool = do_not_override_init
         # self.do_not_override_filled: bool = do_not_override_filled
-        self._style_for_non_none_grids: str | None = style
+        self.style = style
 
-    def __getitem__(self, sudoku_index: tuple[int, int]) -> str | None:
-        res = self.sudoku.__getitem__(sudoku_index)
-        if res == 0:
+    def _get_raw_content(self, sudoku_index: tuple[int, int]) -> str | None:
+        num = self.sudoku[sudoku_index]
+        if num == 0:
             return None
-        return self.content_styler(str(res))
+        return str(num)
 
-    def display_length(self, sudoku_index: tuple[int, int]) -> int:
-        return len(str(self.sudoku[sudoku_index]))
-
-    def content_styler(self, item: str) -> str:
-        """
-        Return a styled markup string competiable with rich.
-        """
-        if self._style_for_non_none_grids is None:
-            return item
-        return f"[{self._style_for_non_none_grids}]{item}[/{self._style_for_non_none_grids}]"
-
-    def max_display_length(self) -> int:
-        max_length: int = 0
-
-        for n in self.sudoku.numbers:
-            if n == 0:
-                continue
-            length = len(str(n))
-            if length > max_length:
-                max_length = length
-
-        return max_length
+    def iter_indices(self) -> Generator[tuple[int, int], None, None]:
+        yield from self.sudoku.__iter__()
 
 
-class SudokuConflictView(CustomViewConfig):
+class StyledDictCustomViewConfig(
+    IterableCustomViewConfigMixin, StyledContentCustomViewMixin, CustomViewConfig
+):
+    """
+    CustomViewCOnfig Protal Implementation. This implementation use a
+    dictionary to store the config.
+    """
+
+    def __init__(self, dict: dict[tuple[int, int], Any], style: str | None) -> None:
+        super().__init__()
+        self.dict = dict
+        self.style = style
+
+    def _get_raw_content(self, sudoku_index: tuple[int, int]) -> str | None:
+        return self.dict.get(sudoku_index, None)
+
+    def iter_indices(self) -> Generator[tuple[int, int], Any, Any]:
+        yield from self.dict.keys()
+
+
+class SudokuConflictsCustomViewConfig(CustomViewConfig):
+    """
+    CutomViewConfig implementation that highlight the conflict in a sudoku.
+    """
+
     def __init__(self, sudoku: Sudoku, conflict_style: str | None = "red bold") -> None:
         super(CustomViewConfig, self).__init__()
         self.sudoku = sudoku
@@ -203,6 +277,20 @@ def view(
             Notice that function will try all configs from begining to end,
             once a non-None value is returned, it will be used as the final result.
 
+    ## Rendering Priority:
+
+    In general, `custom_view_configs` has the highest priority over what content and what
+    style is used when rendering.
+
+    Once there is at least one config that provided the content for a specific index,
+    that content will always be displayed on screen no matter if that block is filled.
+
+    If none of the config provide content for a grid, and this grid is not filled, and
+    include_candidates is True, then this function will try to generate the candiates
+    info and display that.
+
+    If none of above condition is met, that grid will show nothing.
+
     Returns:
         str: A `rich` renderable string with style markup used.
     """
@@ -213,9 +301,9 @@ def view(
     # create custom config for init_sudoku and sudoku
     if init_sudoku is not None:
         custom_view_configs.append(
-            BasicSudokuViewCustomConfig(sudoku=init_sudoku, style=init_style)
+            SudokuCustomViewConfig(sudoku=init_sudoku, style=init_style)
         )
-    custom_view_configs.append(BasicSudokuViewCustomConfig(sudoku=sudoku, style=style))
+    custom_view_configs.append(SudokuCustomViewConfig(sudoku=sudoku, style=style))
 
     max_length = max([config.max_display_length() for config in custom_view_configs])
 
@@ -247,6 +335,7 @@ def view(
 
     row_indices = f"[{index_style}]{row_indices}[/{index_style}]"
 
+    # generate rule
     rule = ""
     for i in range(sudoku.width - 1):
         for j in range(sudoku.width):
@@ -266,19 +355,15 @@ def view(
     rule += "━" * (max_field_length + 2)
     rule = f"┣{rule}┫\n"
 
+    # generate first/last rule based on rule
     first_rule = "  " + (
         rule.replace("┣", "┏").replace("┫", "┓").replace("╋", "┳").replace("┿", "┯")
     )
     last_rule = "  " + (
         rule.replace("┣", "┗").replace("┫", "┛").replace("╋", "┻").replace("┿", "┷")
     )
-    # thin_rule = (
-    #     rule.replace("┣", "├").replace("┫", "┤").replace("╋", "┼").replace("━", "─")
-    # )
-    # thin_rule = rule.replace("━", "─")
-    # ╂┿
-    # ┠┨
-    # ┯┷
+
+    # generate thin rule
     thin_rule = ""
     for i in range(sudoku.width - 1):
         for j in range(sudoku.width):
@@ -298,33 +383,47 @@ def view(
 
     thin_rule = f"┠{thin_rule}┨\n"
 
+    # s to store the final string(styled) result to return
     s = ""
 
     field_count = sudoku.width * sudoku.height
 
     for rc, row in enumerate(sudoku.indices):
         col_str = []
+
+        # iterate every coordinates (indices)
         for cc, col in enumerate(sudoku.indices):
+
+            # store the content to show in this grid
+            val: str | None = None
+            # store display length for content
             length_in_config: int | None = None
+            # mark if the content is candidates info
             is_candidate_grid: bool = False
 
-            if sudoku[row, col]:
-                # iterate through custom config
-                for config in custom_view_configs:
-                    res = config[row, col]
-                    # get info from config
-                    if res is not None:
-                        val = res
-                        length_in_config = config.display_length((row, col))
-                        break
+            # Try to get content and other metainfo from list of CustomViewConfig
+            for config in custom_view_configs:
+                res = config[row, col]
+                # get info from config
+                if res is not None:
+                    val = res
+                    length_in_config = config.display_length((row, col))
+                    break
 
-            elif not include_candidates:
-                val = ""
-            else:
+            # if
+            # no content provided by custom config
+            # this grid is not filled
+            # include_candidates==True
+            # then add candidates info
+            if (val is None) and (sudoku[row, col] == 0) and include_candidates:
                 is_candidate_grid = True
                 val = candidate_prefix + number_sep.join(
                     [str(x) for x in sorted(sudoku.get_candidates(row, col))]
                 )
+
+            # set empty string if val is None
+            if val is None:
+                val = ""
 
             # confirm the final length offset used to do the justify work
             max_field_length_used_when_justify = max_field_length

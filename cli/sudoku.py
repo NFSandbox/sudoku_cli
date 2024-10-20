@@ -20,7 +20,12 @@ from .category import get_category_str
 from .model import SudokuCLIGameData
 
 from exceptions import BaseError
-from tools.sudoku_view import view, CustomViewConfig, SudokuConflictView
+from tools.sudoku_view import (
+    view,
+    CustomViewConfig,
+    SudokuConflictsCustomViewConfig,
+    StyledDictCustomViewConfig,
+)
 from data.templates import TEMPLATE_DICT
 
 help_info = """
@@ -235,7 +240,7 @@ class SudokuCLI(cmd2.CommandSet):
         # titles
         self._cmd.poutput(Align("[b]Current Sudoku[/b]", align="center"))
 
-        conflict_view_config = SudokuConflictView(
+        conflict_view_config = SudokuConflictsCustomViewConfig(
             sudoku=self.sudoku,
             conflict_style=self.conflicts_style,
         )
@@ -251,7 +256,7 @@ class SudokuCLI(cmd2.CommandSet):
                     candidate_style=self.candidate_style,
                     init_style=self.init_style,
                     style=self.style,
-                    custom_view_configs=[conflict_view_config]
+                    custom_view_configs=[conflict_view_config],
                 ).strip('\n')}",
                 align="center",
             ),
