@@ -11,6 +11,7 @@ import sys
 from cmd2 import ansi
 from typing import Any, IO
 from functools import partial
+from traceback import format_exc
 
 from loguru import logger
 
@@ -183,7 +184,7 @@ class RichCmd(Cmd2PrintProtocol):
 
     def pexcept(self, msg: Any, *, end: str = "\n", **kwargs: Any) -> None:
         if not isinstance(msg, BaseError):
-            msg = f"Uncaught error:\n{msg}"
+            msg = f"Uncaught error:\n{msg}\n{format_exc()}"
         return self.perror(msg, end=end, **kwargs)
 
     def _print_message(self, message: str, file: IO[str] | None = None) -> None:

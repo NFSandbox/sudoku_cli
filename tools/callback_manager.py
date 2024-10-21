@@ -13,6 +13,7 @@ class CallbackInterrupted(BaseError):
         name: str = "callback_interrupted",
         message: str = "Callback received a interrput signal. ",
     ) -> None:
+        self.callback_key = callback_key
         message += f"Callback key: {callback_key}"
         super().__init__(name=name, message=message)
 

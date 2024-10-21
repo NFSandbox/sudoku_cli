@@ -33,8 +33,7 @@ from sudokutools.solve import bruteforce, init_candidates
 from sudokutools.analyze import find_conflicts
 from sudokutools.sudoku import Sudoku
 
-from cli import doc
-from cli import step
+from cli import SudokuCLI, DocCLI, StepCLI
 from cli.category import get_category_str
 from tools.cmd2_rich_mixin import RichCmd
 
@@ -76,6 +75,7 @@ class SudokuCLIApplication(RichCmd, cmd2.Cmd):
         super().__init__(
             startup_script=".sudokurc",
             silence_startup_script=True,
+            auto_load_commands=False,
             # persistent_history_file='./history'
         )
         self.poutput(f"sys.stdin.isatty()={sys.stdin.isatty()}")
@@ -100,6 +100,15 @@ class SudokuCLIApplication(RichCmd, cmd2.Cmd):
         )
 
         self._categorize_builtin_commands()
+
+        # register subcommands
+        self.sudoku_cli = SudokuCLI()
+        self.step_cli = StepCLI(self.sudoku_cli)
+        self.doc_cli = DocCLI()
+
+        cli_list = [self.sudoku_cli, self.step_cli, self.doc_cli]
+        for cli in cli_list:
+            self.register_command_set(cli)
 
     def _categorize_builtin_commands(self):
         system_category = get_category_str("System")

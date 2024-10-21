@@ -1,5 +1,6 @@
 import sys
 import os
+from typing import Any, Literal
 from copy import copy, deepcopy
 
 import cmd2
@@ -18,6 +19,7 @@ from sudokutools.sudoku import Sudoku
 from .args import *
 from .category import get_category_str
 from .model import SudokuCLIGameData
+from .step import StepCLI
 
 from exceptions import BaseError
 from tools.sudoku_view import (
@@ -26,6 +28,7 @@ from tools.sudoku_view import (
     SudokuConflictsCustomViewConfig,
     StyledDictCustomViewConfig,
 )
+from tools.callback_manager import CallbackManager, CallbackInterrupted
 from data.templates import TEMPLATE_DICT
 
 help_info = """
@@ -92,6 +95,23 @@ class SudokuCLI(cmd2.CommandSet):
         self.style = "cyan bold"
         """
         Rich markup style for filled sudoku grids.
+        """
+
+        self.put_callbacks = CallbackManager[
+            [int, int, int, Sudoku],
+            Any,
+            Literal["before", "after"],
+        ]()
+        """
+        Callback manager for user put actions.
+        
+        Singals:
+        - `before` Before a "put" opeartion has been executed
+        - `after` After a "put" operation has been executed.
+        
+        Note:
+        - If a "put" opeartion is illegal and be interrputed, "after"
+          signals will not be triggered.
         """
 
         style_settables = {
@@ -423,14 +443,29 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Put or update a box of the sudoku
         """
+        # retrieve args (both zero-indexed)
+        row = args.row - 1
+        col = args.column - 1
+        val = args.value
+
+        try:
+            self.put_callbacks.trigger_sync("before", row, col, val, self.sudoku)
+        except CallbackInterrupted as e:
+            self._cmd.pfeedback(
+                f"Put opration interrputed by callback functions. Callback key: {e.callback_key}"
+            )
+            return
+
         # check if this grid is an initial grid
         if self.init_sudoku[args.row - 1, args.column - 1] != 0:
             self._cmd.poutput("[yellow]Do not change the generated grid[/yellow]")
             return
 
         self.sudoku[args.row - 1, args.column - 1] = args.value
+
         self.do_show("")
         self.do_check("")
+        self.put_callbacks.trigger_sync("after", row, col, val, self.sudoku)
 
     def default(self, args):
         self._cmd.poutput(str(args))
