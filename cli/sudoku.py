@@ -21,6 +21,8 @@ from .category import get_category_str
 from .model import SudokuCLIGameData
 from .step import StepCLI
 
+from .step import StepCLI
+
 from exceptions import BaseError
 from tools.sudoku_view import (
     view,
@@ -96,6 +98,8 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Rich markup style for filled sudoku grids.
         """
+        self.steps = StepCLI()
+
 
         self.put_callbacks = CallbackManager[
             [int, int, int, Sudoku],
@@ -461,6 +465,7 @@ class SudokuCLI(cmd2.CommandSet):
             self._cmd.poutput("[yellow]Do not change the generated grid[/yellow]")
             return
 
+        self.steps.log_put_execution([args.row, args.column, args.value])
         self.sudoku[args.row - 1, args.column - 1] = args.value
 
         self.do_show("")

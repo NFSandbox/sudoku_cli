@@ -15,7 +15,9 @@ from sudokutools.solve import bruteforce, init_candidates
 from sudokutools.analyze import find_conflicts
 from sudokutools.sudoku import Sudoku
 from .category import get_category_str
+from .sudoku import SudokuCLI
 
+from datetime import datetime
 
 from .args import *
 
@@ -23,20 +25,17 @@ from .args import *
 @with_default_category(get_category_str("Sudoku"))
 class StepCLI(cmd2.CommandSet):
 
-    def __init__(self, sudoku_cli) -> None:
-        from .sudoku import SudokuCLI
-
+    def __init__(self) -> None:
         super().__init__()
-        self.sudoku_cli: SudokuCLI = sudoku_cli
-        self.put_steps: list[dict] = []
+        self.put_steps = []
         self.start_time = datetime.now()
-        self._cmd: cmd2.Cmd  # for type checker like mypy
 
-        # add callbacks to sudoku cli
-        sudoku_cli.put_callbacks.add("after", self.after_put_hook)
-
-    def after_put_hook(self, *args):
-        self._cmd.poutput(f"Received parameters: {args}")
+    def log_put_execution(self, params):
+        log_entry = {
+            'time': datetime.now() - self.start_time,
+            'params': params
+        }
+        self.put_steps.append(log_entry)
 
     @with_argparser(step_parser)
     def do_step(self, args):
@@ -48,7 +47,8 @@ class StepCLI(cmd2.CommandSet):
     @with_argparser(step_show_parser)
     def do_step_show(self, args):
         for i in range(len(self.put_steps) - args.recent, len(self.put_steps)):
-            pass
+            rprint(put_args[i])
+            # 具体输出格回头再写
         pass
 
     @with_argparser(step_revert_parser)
