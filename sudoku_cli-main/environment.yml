@@ -1,0 +1,9 @@
+name: sudoku_cli
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12.4
+  - pip:
+    - cmd2==2.4.3
+    - sudokutools==0.4.0

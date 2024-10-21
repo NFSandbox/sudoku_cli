@@ -1,0 +1,4 @@
+class BaseError(Exception):
+    def __init__(self, name: str, message: str) -> None:
+        self.name = name
+        self.message = message
