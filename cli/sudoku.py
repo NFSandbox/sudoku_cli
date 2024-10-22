@@ -47,7 +47,33 @@ help_info = """
 - help \\[command]    Show help of a certain command.
 [/blue]
 
+[blue]Enter [b]"home"[/] or [b]"ho"[/] to show home page[/blue]
 [blue]Enter [b]"quit"[/] or [b]"q"[/] to exit[/blue]
+"""
+
+home_page_info = """
+# CLI Sudoku Game
+
+## Author
+
+**Yujia**, **Ruofan**  _AHU, Software Engineering_
+
+## Thanks
+
+- `sudokutools` Sudoku basic algorithm support in Python.
+- `cmd2` Tools to create CLI with Python.
+
+## Documentations & Helps
+
+- Run `help` to check all available commands. _(`help -v` for detailed info)_
+- Run `doc intro` to view the basic introductions.
+
+# Start Your Journey
+
+- Run `newgame` to start a new game! _have a good time!_
+- If you alrady have an ongoing game, run `show`/`sh` to show the game!
+
+> Run `quit`/`q` to quit game program.
 """
 
 
@@ -140,6 +166,10 @@ class SudokuCLI(cmd2.CommandSet):
         cmd2.categorize(self.do_cls, get_category_str("System"))
 
         self.create_new_game(difficulty=0.5)
+
+    def do_home(self, args):
+        self._cmd.onecmd_plus_hooks("cls")
+        self._cmd.poutput(Markdown(home_page_info))
 
     @with_argparser(loadgame_args)
     def do_loadgame(self, args) -> None:
@@ -459,9 +489,10 @@ class SudokuCLI(cmd2.CommandSet):
         seconds = total_seconds % 60
         put_time = f"time: {hours}:{minutes}:{seconds}"
 
-
         try:
-            self.put_callbacks.trigger_sync("before", put_time, row, col, val, self.sudoku)
+            self.put_callbacks.trigger_sync(
+                "before", put_time, row, col, val, self.sudoku
+            )
         except CallbackInterrupted as e:
             self._cmd.pfeedback(
                 f"Put opration interrputed by callback functions. Callback key: {e.callback_key}"
@@ -474,7 +505,6 @@ class SudokuCLI(cmd2.CommandSet):
             return
 
         self.sudoku[args.row - 1, args.column - 1] = args.value
-
 
         self.do_show("")
         self.do_check("")

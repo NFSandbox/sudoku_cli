@@ -50,25 +50,6 @@ Run [bold green]help[/bold green] to check all available commands.
 Run [bold blue]newgame[/bold blue] to start a new game!
 """
 
-startup_info = """
-# CLI Sudoku Game
-
-## Author
-
-**Yujia**, **Ruofan**  _AHU, Software Engineering_
-
-## Thanks
-
-- `sudokutools` Sudoku basic algorithm support in Python.
-- `cmd2` Tools to create CLI with Python.
-
----------------------------------------------------
-
-- Run `help` to check all available commands. _(`help -v` for detailed info)_
-- Run `doc intro` to view the basic introductions.
-- Run `newgame` to start a new game! _have a good time!_
-"""
-
 
 class SudokuCLIApplication(RichCmd, cmd2.Cmd):
     def __init__(self):
@@ -79,10 +60,8 @@ class SudokuCLIApplication(RichCmd, cmd2.Cmd):
             # persistent_history_file='./history'
         )
         self.poutput(f"sys.stdin.isatty()={sys.stdin.isatty()}")
-        self.prompt = "Sudoku CLI > "
+        self.prompt = "Sudoku CLI> "
         self.use_rawinput = True
-        # print startup info
-        rprint(Markdown(startup_info))
 
         # hide unused command provided by cmd2
         if not hasattr(self, "hidden_commands"):
@@ -109,6 +88,9 @@ class SudokuCLIApplication(RichCmd, cmd2.Cmd):
         cli_list = [self.sudoku_cli, self.step_cli, self.doc_cli]
         for cli in cli_list:
             self.register_command_set(cli)
+
+        # show home page
+        self.onecmd_plus_hooks("home")
 
     def _categorize_builtin_commands(self):
         system_category = get_category_str("System")
