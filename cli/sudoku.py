@@ -1,6 +1,7 @@
 import sys
 import os
 from typing import Any, Literal
+from typing import Any, Literal
 from copy import copy, deepcopy
 
 import cmd2
@@ -20,8 +21,7 @@ from .args import *
 from .category import get_category_str
 from .model import SudokuCLIGameData
 from .step import StepCLI
-
-from .step import StepCLI
+from datetime import datetime, timedelta, time
 
 from exceptions import BaseError
 from tools.sudoku_view import (
@@ -30,6 +30,7 @@ from tools.sudoku_view import (
     SudokuConflictsCustomViewConfig,
     StyledDictCustomViewConfig,
 )
+from tools.callback_manager import CallbackManager, CallbackInterrupted
 from tools.callback_manager import CallbackManager, CallbackInterrupted
 from data.templates import TEMPLATE_DICT
 
@@ -98,11 +99,10 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Rich markup style for filled sudoku grids.
         """
-        self.steps = StepCLI()
-
+        self.start_time: datetime = datetime.now()
 
         self.put_callbacks = CallbackManager[
-            [int, int, int, Sudoku],
+            [str, int, int, int, Sudoku],
             Any,
             Literal["before", "after"],
         ]()
@@ -194,6 +194,7 @@ class SudokuCLI(cmd2.CommandSet):
         Create a new game
         """
         self.do_cls()
+        self.start_time = datetime.now()
         difficulty = args.difficulty
         template = args.template
         symmetry = args.symmetry
@@ -448,12 +449,19 @@ class SudokuCLI(cmd2.CommandSet):
         Put or update a box of the sudoku
         """
         # retrieve args (both zero-indexed)
-        row = args.row - 1
-        col = args.column - 1
+        row = args.row
+        col = args.column
         val = args.value
+        operate_time = datetime.now() - self.start_time
+        total_seconds = int(operate_time.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        put_time = f"time: {hours}:{minutes}:{seconds}"
+
 
         try:
-            self.put_callbacks.trigger_sync("before", row, col, val, self.sudoku)
+            self.put_callbacks.trigger_sync("before", put_time, row, col, val, self.sudoku)
         except CallbackInterrupted as e:
             self._cmd.pfeedback(
                 f"Put opration interrputed by callback functions. Callback key: {e.callback_key}"
@@ -465,12 +473,12 @@ class SudokuCLI(cmd2.CommandSet):
             self._cmd.poutput("[yellow]Do not change the generated grid[/yellow]")
             return
 
-        self.steps.log_put_execution([args.row, args.column, args.value])
         self.sudoku[args.row - 1, args.column - 1] = args.value
+
 
         self.do_show("")
         self.do_check("")
-        self.put_callbacks.trigger_sync("after", row, col, val, self.sudoku)
+        self.put_callbacks.trigger_sync("after", put_time, row, col, val, self.sudoku)
 
     def default(self, args):
         self._cmd.poutput(str(args))
