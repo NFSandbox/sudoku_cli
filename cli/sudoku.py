@@ -489,7 +489,7 @@ class SudokuCLI(cmd2.CommandSet):
 
         try:
             self.put_callbacks.trigger_sync(
-                "before", put_time, row, col, val, self.sudoku
+                "before", put_time, row, col,self.init_sudoku[args.row - 1, args.column - 1] , self.sudoku
             )
         except CallbackInterrupted as e:
             self._cmd.pfeedback(

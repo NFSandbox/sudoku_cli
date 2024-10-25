@@ -23,7 +23,6 @@ from .args import *
 
 
 class Diff(BaseModel):
-
     time: datetime
     row: int
     col: int
@@ -46,13 +45,12 @@ class DiffManager(BaseModel):
         return self.diff_list[index]
 
     def apply(self, sudoku: Sudoku, by: int, to: int):
-        for x in (-to, -1):
-            self.diff_list[x].revert(sudoku)
-
-    # def apply(self,sudoku, by, to):
-    #     for x
-    #         diff
-    #         diff.revert(sudoku)
+        if by == 0:
+            for x in (-len(self.diff_list) + to, -1):
+                self.diff_list[x].revert(sudoku)
+        else:
+            for x in (-by, -1):
+                self.diff_list[x].revert(sudoku)
 
 
 @with_default_category(get_category_str("Sudoku"))
@@ -82,16 +80,22 @@ class StepCLI(cmd2.CommandSet):
 
     @with_argparser(step_parser)
     def do_step(self, args):
-        for i in range(len(self.put_steps.diff_list)):
-            self._cmd.poutput(f"{self.put_steps[i]}")
+        if len(self.put_steps.diff_list) == 0:
+            self._cmd.poutput(f"No steps were executed")
+        else:
+            for i in range(len(self.put_steps.diff_list)):
+                self._cmd.poutput(f"Step{i+1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
 
     @with_argparser(step_show_parser)
     def do_step_show(self, args):
-        for i in range(
-            len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
-        ):
-            self._cmd.poutput(f"{self.put_steps[i]}")
+        if len(self.put_steps.diff_list) == 0:
+            self._cmd.poutput(f"No steps were executed")
+        else:
+            for i in range(
+                    len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
+            ):
+                self._cmd.poutput(f"Step{i+1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
 
     @with_argparser(step_revert_parser)
     def do_step_revert(self, args):
-        pass
+        self.put_steps.apply(self.sudoku_cli.sudoku, args.by, args.to)
