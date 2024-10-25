@@ -73,6 +73,9 @@ cmd.poutput(Markdown(md_str))
 
 在上述代码示例中，`md_str` 必须是一个格式正确的 Markdown 文档字符串。
 
+![Markdown Display Example](https://github.com/user-attachments/assets/f12760fb-fc74-465b-9bdb-c9d5c2dffb22)
+
+
 #### Markup 标记支持
 
 本程序支持对于简易 Markup 标记后的字符串进行打印：
@@ -169,15 +172,94 @@ usage: loadgame [-h] (-s STRING | -f [FILE])
 Error: argument -s/--string: not allowed with argument -f/--file
 ```
 
+![Error Display Example](https://github.com/user-attachments/assets/7f2d7620-caa7-4fd2-95fc-95b4e5394557)
+
+
 ## 功能实现
 
 ### 指令列表
 
+```
+Sudoku CLI> hh
+
+Documented commands (use 'help -v' for verbose/'help <topic>' for details):
+
+Category 1: Sudoku
+======================================================================================================      
+check                 Check if there's any conflict in current game
+export                Export sudoku game
+home                  Show the home screen of this game program
+loadgame              Load an existing game from a data string
+newgame               Create a new game
+put                   Put or update a box of the sudoku
+show                  Show current game
+solve                 Show the solution of current sudoku game
+step
+step_revert
+step_show
+
+Category 2: Documentation
+======================================================================================================      
+doc
+
+Category 3: System
+======================================================================================================      
+alias                 Manage aliases
+cls                   Clear all content on screen
+help                  List available commands or provide detailed help for a specific command
+history               View, run, edit, save, or clear previously entered commands
+quit                  Exit this application
+```
+
 ### 新建游戏
 
-本程序的新游戏创建支持各种定制化选项，参见附件 “Newgame Customization”
+```
+Sudoku CLI> n -h
+usage: newgame [-h] [-d DIFFICULTY] [-s {rotate-90,rotate-180,mirror-x,mirror-y,mirror-xy}] [-t TEMPLATE]   
+
+Create a new game
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DIFFICULTY, --difficulty DIFFICULTY
+                        Set the difficultly of the newly generated game. Should be a float number between   
+                        0 and 1, larger number will lead to more empty blocks, thus, a more challenging     
+                        game. (default: None)
+  -s {rotate-90,rotate-180,mirror-x,mirror-y,mirror-xy}, --symmetry
+{rotate-90,rotate-180,mirror-x,mirror-y,mirror-xy}
+                        Specify the symmetry pattern of the new game (default: None)
+  -t TEMPLATE, --template TEMPLATE
+                        Specify the grid template of the new game (default: None)
+```
+
+此外，本程序的新游戏创建支持各种定制化选项，参见附件 “Newgame Customization”
+
+Create newgame with template "cat"
+
+![Create Newgame With Template](https://github.com/user-attachments/assets/a08099a7-d4ec-4732-94b8-b3af72bae1cd)
+
+Create newgame with `-d 0.4` and `-s rotate-90`
+
+![Create Symmetric Game](https://github.com/user-attachments/assets/23dcd9dc-9ecd-4636-8251-50bf067bb54b)
 
 ### 输入数据
+
+```
+Usage: put [-h] {1, 2, 3, 4, 5, 6, 7, 8, 9} {1, 2, 3, 4, 5, 6, 7, 8, 9} {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}      
+
+Put or update a box of the sudoku
+
+positional arguments:
+  {1, 2, 3, 4, 5, 6, 7, 8, 9}
+                        Row number of the box
+  {1, 2, 3, 4, 5, 6, 7, 8, 9}
+                        Column number of the box
+  {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+                        Value of the box
+
+optional arguments:
+  -h, --help            show this help message and exit
+```
 
 ### 查看游戏
 
@@ -190,6 +272,24 @@ Error: argument -s/--string: not allowed with argument -f/--file
 - 输入格子的高亮
 - 冲突格子的高亮
 - 高亮格式自定义
+
+```
+Sudoku CLI> sh -h
+Usage: show [-h] [-c] [-p]
+
+Show current game
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c, --candidates      Show chandidates of not filled position
+  -p, --perserve-terminal
+                        Do not clear terminal before showing the sudoku
+```
+
+![Grid Highlight Example](https://github.com/user-attachments/assets/33eff4d3-7bae-40e0-a863-db593f0f90ce)
+
+![Candidates Display Example](https://github.com/user-attachments/assets/172eeff5-618f-4384-a727-2179fac9d01a)
+
 
 ### 游戏导入导出
 
@@ -223,6 +323,18 @@ Error: argument -s/--string: not allowed with argument -f/--file
 
 详见 [此GitHub Issue](https://github.com/python-cmd2/cmd2/issues/1331)
 
+## 总结与感悟
+
+周裕佳：
+
+总体而言，本次实验对于我来说试一次难忘的设计和开发体验。在此之前，我并没有尝试开发过一个相对完整的CLI应用程序，在当今社会中，GUI用户界面大行其道，越来越多的人接触CLI的机会变得越来越少。通过这次实验，我得以重新认识这一个历史悠久而又功能强大的交互方式，得以学习如何从头开始开发一个现代化的CLI程序，学习如何优化用户的参数输入过程，学习如何合理和漂亮的在命令行显示数据...
+
+我相信经过这次实验，我应该能对于命令行有一个更深刻的认识，也相信这将为我未来的各种开发工作提供宝贵的经验。
+
+李若凡：
+
+在本次人机交互课程实验的过程中，我深入学习并掌握了Python编程语言的许多重要知识点，同时也学会了使用Git进行版本管理和团队协作开发。在实验中，我借由已有的C++基础，系统地学习了Python的基本语法、数据结构和面向对象编程等核心知识。同时，通过解决实际问题，我对Python的应用有了更深刻的认识。此外，通过本次实验，我掌握了Git的基本操作，如提交更改、创建和合并分支等。此外，我还学会了如何使用GitHub进行团队协作开发，这使我在实际项目中能够更好地与他人协作，共同完成任务。这次实验让我在理论和实践中都有了显著的进步，为未来的学习和工作打下了坚实的基础。这段宝贵的学习经历将激励我在今后的学习和工作中不断进步，不断追求卓越。
+
 -----
 
 # Advanced REPL Design
@@ -245,8 +357,6 @@ Here is an example:
 (Cmd) sol  # press tab will trigger auto-complete
 (Cmd) solve
 ```
-
-
 
 ## Command Alias
 
