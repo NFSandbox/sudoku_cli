@@ -168,6 +168,9 @@ class SudokuCLI(cmd2.CommandSet):
         self.create_new_game(difficulty=0.5)
 
     def do_home(self, args):
+        """
+        Show the home screen of this game program
+        """
         self._cmd.onecmd_plus_hooks("cls")
         self._cmd.poutput(Markdown(home_page_info))
 
