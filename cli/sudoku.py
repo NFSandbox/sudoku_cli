@@ -128,7 +128,7 @@ class SudokuCLI(cmd2.CommandSet):
         self.start_time: datetime = datetime.now()
 
         self.put_callbacks = CallbackManager[
-            [str, int, int, int, Sudoku],
+            [datetime, int, int, int, Sudoku],
             Any,
             Literal["before", "after"],
         ]()
@@ -482,12 +482,7 @@ class SudokuCLI(cmd2.CommandSet):
         row = args.row
         col = args.column
         val = args.value
-        operate_time = datetime.now() - self.start_time
-        total_seconds = int(operate_time.total_seconds())
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        put_time = f"time: {hours}:{minutes}:{seconds}"
+        put_time = datetime.now()
 
         try:
             self.put_callbacks.trigger_sync(
