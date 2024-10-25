@@ -24,14 +24,11 @@ from .args import *
 
 class Diff(BaseModel):
 
-    def __init__(self, t: datetime, r: int, c: int, bv: int, av: int, args):  # initialize the diff object
-
-        super().__init__()
-        self.time = t
-        self.row = r
-        self.col = c
-        self.before_val = bv
-        self.after_val = av
+    time: datetime
+    row: int
+    col: int
+    before_val: int
+    after_val: int
 
     # def apply(self):
 
@@ -43,10 +40,7 @@ class Diff(BaseModel):
 
 
 class DiffManager(BaseModel):
-    diff_list: list[Diff]
-
-    def __init__(self):
-        super().__init__()
+    diff_list: list[Diff] = []
 
     def __getitem__(self, index):
         return self.diff_list[index]
@@ -72,6 +66,7 @@ class StepCLI(cmd2.CommandSet):
         self.put_steps: DiffManager = DiffManager()
         self._cmd: cmd2.Cmd  # for type checker like mypy
         self.t: int = 0
+        """Temporary value used to store the previous value of a grid."""
 
         # add callbacks to sudoku cli
         self.sudoku_cli.put_callbacks.add("before", self.before_put_hook)
@@ -81,7 +76,9 @@ class StepCLI(cmd2.CommandSet):
         self.t = v
 
     def after_put_hook(self, time: datetime, r: int, c: int, v: int, *args):
-        self.put_steps.diff_list.append(Diff(time, r, c, self.t, v))
+        self.put_steps.diff_list.append(
+            Diff(time=time, row=r, col=c, before_val=self.t, after_val=v)
+        )
 
     @with_argparser(step_parser)
     def do_step(self, args):
@@ -90,7 +87,9 @@ class StepCLI(cmd2.CommandSet):
 
     @with_argparser(step_show_parser)
     def do_step_show(self, args):
-        for i in range(len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)):
+        for i in range(
+            len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
+        ):
             self._cmd.poutput(f"{self.put_steps[i]}")
 
     @with_argparser(step_revert_parser)
