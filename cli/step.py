@@ -34,6 +34,10 @@ class Diff(BaseModel):
     def revert(self, sudoku: Sudoku):
         sudoku[self.row - 1, self.col - 1] = self.before_val
 
+    def __repr__(self):
+        return (f"time:{self.time} \n"
+                f"operation:({self.row},{self.col}) {self.before_val}->{self.after_val}")
+
     # def apply()
     # def revert()
 
@@ -92,9 +96,8 @@ class StepCLI(cmd2.CommandSet):
             return
 
         for i in range(len(self.diffs.diff_list)):
-            self._cmd.poutput(
-                f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
-            )
+            self._cmd.poutput(f"Step{i + 1}:")
+            self._cmd.poutput(self.diffs.diff_list[i].__repr__())
 
     def do_step_show(self, args):
         if len(self.diffs.diff_list) == 0:
@@ -102,28 +105,27 @@ class StepCLI(cmd2.CommandSet):
         else:
             if args.recent > len(self.diffs.diff_list):
                 for i in range(len(self.diffs.diff_list)):
-                    self._cmd.poutput(
-                        f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
-                    )
+                    self._cmd.poutput(f"Step{i + 1}:")
+                    self._cmd.poutput(self.diffs.diff_list[i].__repr__())
             else:
                 for i in range(
-                    len(self.diffs.diff_list) - args.recent,
-                    len(self.diffs.diff_list),
+                        len(self.diffs.diff_list) - args.recent,
+                        len(self.diffs.diff_list),
                 ):
-                    self._cmd.poutput(
-                        f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
-                    )
+                    self._cmd.poutput(f"Step{i + 1}:")
+                    self._cmd.poutput(self.diffs.diff_list[i].__repr__())
 
     def do_step_revert(self, args) -> None:
         # extract args
         to: int | None = args.to
         by: int | None = args.by
 
-        if to is not None:
-            self.diffs.revert_to(self.sudoku_cli.sudoku, to)
-
-        elif by is not None:
-            self.diffs.revert_to(self.sudoku_cli.sudoku, len(self.diffs) - by)
+        if 0 <= args.to < len(self.diffs.diff_list):
+            self.diffs.apply(self.sudoku_cli.sudoku, args.to)
+        elif 0 <= args.by <= len(self.diffs.diff_list):
+            self.diffs.apply(self.sudoku_cli.sudoku, len(self.diffs.diff_list) - args.by)
+        else:
+            self._cmd.poutput(f"Illegal input : out of range")
         self.sudoku_cli.do_show("")
         self.sudoku_cli.do_check("")
 
