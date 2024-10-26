@@ -44,7 +44,10 @@ class DiffManager(BaseModel):
     def __getitem__(self, index):
         return self.diff_list[index]
 
-    def apply(self, sudoku: Sudoku, to: int):
+    def __len__(self):
+        return len(self.diff_list)
+
+    def revert_to(self, sudoku: Sudoku, to: int):
         for x in self.diff_list[to:][::-1]:
             x.revert(sudoku)
             self.diff_list.remove(x)
@@ -58,7 +61,7 @@ class StepCLI(cmd2.CommandSet):
 
         super().__init__()
         self.sudoku_cli: SudokuCLI = sudoku_cli
-        self.put_steps: DiffManager = DiffManager()
+        self.diffs: DiffManager = DiffManager()
         self._cmd: cmd2.Cmd  # for type checker like mypy
         self.t: int = 0
         """Temporary value used to store the previous value of a grid."""
@@ -71,13 +74,13 @@ class StepCLI(cmd2.CommandSet):
         self.t = v
 
     def after_put_hook(self, time: datetime, r: int, c: int, v: int, *args):
-        self.put_steps.diff_list.append(
+        self.diffs.diff_list.append(
             Diff(time=time, row=r, col=c, before_val=self.t, after_val=v)
         )
 
     @with_argparser(step_parser)
     def do_step(self, args):
-        if len(self.put_steps.diff_list) == 0:
+        if len(self.diffs.diff_list) == 0:
             self._cmd.poutput(f"No steps were executed")
             return
 
@@ -88,34 +91,39 @@ class StepCLI(cmd2.CommandSet):
             func(self, args)
             return
 
-        for i in range(len(self.put_steps.diff_list)):
+        for i in range(len(self.diffs.diff_list)):
             self._cmd.poutput(
-                f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+                f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
             )
 
     def do_step_show(self, args):
-        if len(self.put_steps.diff_list) == 0:
+        if len(self.diffs.diff_list) == 0:
             self._cmd.poutput(f"No steps were executed")
         else:
-            if args.recent > len(self.put_steps.diff_list):
-                for i in range(len(self.put_steps.diff_list)):
+            if args.recent > len(self.diffs.diff_list):
+                for i in range(len(self.diffs.diff_list)):
                     self._cmd.poutput(
-                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+                        f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
                     )
             else:
                 for i in range(
-                        len(self.put_steps.diff_list) - args.recent,
-                        len(self.put_steps.diff_list),
+                    len(self.diffs.diff_list) - args.recent,
+                    len(self.diffs.diff_list),
                 ):
                     self._cmd.poutput(
-                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+                        f"Step{i + 1}:{self.diffs[i].time} ({self.diffs[i].row},{self.diffs[i].col}) {self.diffs[i].before_val}->{self.diffs[i].after_val}"
                     )
 
-    def do_step_revert(self, args):
-        if args.to:
-            self.put_steps.apply(self.sudoku_cli.sudoku, args.to)
-        elif args.by:
-            self.put_steps.apply(self.sudoku_cli.sudoku, len(self.put_steps.diff_list)-args.by)
+    def do_step_revert(self, args) -> None:
+        # extract args
+        to: int | None = args.to
+        by: int | None = args.by
+
+        if to is not None:
+            self.diffs.revert_to(self.sudoku_cli.sudoku, to)
+
+        elif by is not None:
+            self.diffs.revert_to(self.sudoku_cli.sudoku, len(self.diffs) - by)
         self.sudoku_cli.do_show("")
         self.sudoku_cli.do_check("")
 
