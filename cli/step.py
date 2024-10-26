@@ -44,13 +44,10 @@ class DiffManager(BaseModel):
     def __getitem__(self, index):
         return self.diff_list[index]
 
-    def apply(self, sudoku: Sudoku, by: int, to: int):
-        if by == 0:
-            for x in (-len(self.diff_list) + to, -1):
-                self.diff_list[x].revert(sudoku)
-        else:
-            for x in (-by, -1):
-                self.diff_list[x].revert(sudoku)
+    def apply(self, sudoku: Sudoku, to: int):
+        for x in self.diff_list[to:][::-1]:
+            x.revert(sudoku)
+            self.diff_list.remove(x)
 
 
 @with_default_category(get_category_str("Sudoku"))
@@ -107,15 +104,20 @@ class StepCLI(cmd2.CommandSet):
                     )
             else:
                 for i in range(
-                    len(self.put_steps.diff_list) - args.recent,
-                    len(self.put_steps.diff_list),
+                        len(self.put_steps.diff_list) - args.recent,
+                        len(self.put_steps.diff_list),
                 ):
                     self._cmd.poutput(
                         f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
                     )
 
     def do_step_revert(self, args):
-        self.put_steps.apply(self.sudoku_cli.sudoku, args.by, args.to)
+        if args.to:
+            self.put_steps.apply(self.sudoku_cli.sudoku, args.to)
+        elif args.by:
+            self.put_steps.apply(self.sudoku_cli.sudoku, len(self.put_steps.diff_list)-args.by)
+        self.sudoku_cli.do_show("")
+        self.sudoku_cli.do_check("")
 
     # subparser
     # subparser settings for step
