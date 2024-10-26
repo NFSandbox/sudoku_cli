@@ -231,14 +231,19 @@ step_revert_parser: CustomArgumentParser = step_sub_parser.add_parser(
     "revert",
     help="Revert the sudoku game to a certain previous state",
 )
-_step_revert_parser_revert_group = step_revert_parser.add_mutually_exclusive_group()
+_step_revert_parser_revert_group = step_revert_parser.add_mutually_exclusive_group(
+    required=True
+)
+
 _step_revert_parser_revert_group.add_argument(
     "-b",
     "--by",
+    type=int,
     help="Revert by certain steps",
 )
 _step_revert_parser_revert_group.add_argument(
     "-t",
     "--to",
+    type=int,
     help="Revert to step with certain index",
 )

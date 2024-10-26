@@ -82,12 +82,20 @@ class StepCLI(cmd2.CommandSet):
     def do_step(self, args):
         if len(self.put_steps.diff_list) == 0:
             self._cmd.poutput(f"No steps were executed")
-        else:
-            for i in range(len(self.put_steps.diff_list)):
-                self._cmd.poutput(
-                    f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+            return
 
-    @with_argparser(step_show_parser)
+        # check sub command
+        func = getattr(args, "func", None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+            return
+
+        for i in range(len(self.put_steps.diff_list)):
+            self._cmd.poutput(
+                f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+            )
+
     def do_step_show(self, args):
         if len(self.put_steps.diff_list) == 0:
             self._cmd.poutput(f"No steps were executed")
@@ -95,14 +103,21 @@ class StepCLI(cmd2.CommandSet):
             if args.recent > len(self.put_steps.diff_list):
                 for i in range(len(self.put_steps.diff_list)):
                     self._cmd.poutput(
-                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+                    )
             else:
                 for i in range(
-                        len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
+                    len(self.put_steps.diff_list) - args.recent,
+                    len(self.put_steps.diff_list),
                 ):
                     self._cmd.poutput(
-                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}"
+                    )
 
-    @with_argparser(step_revert_parser)
     def do_step_revert(self, args):
         self.put_steps.apply(self.sudoku_cli.sudoku, args.by, args.to)
+
+    # subparser
+    # subparser settings for step
+    step_show_parser.set_defaults(func=do_step_show)
+    step_revert_parser.set_defaults(func=do_step_revert)
