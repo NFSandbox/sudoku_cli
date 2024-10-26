@@ -84,17 +84,24 @@ class StepCLI(cmd2.CommandSet):
             self._cmd.poutput(f"No steps were executed")
         else:
             for i in range(len(self.put_steps.diff_list)):
-                self._cmd.poutput(f"Step{i+1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+                self._cmd.poutput(
+                    f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
 
     @with_argparser(step_show_parser)
     def do_step_show(self, args):
         if len(self.put_steps.diff_list) == 0:
             self._cmd.poutput(f"No steps were executed")
         else:
-            for i in range(
-                    len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
-            ):
-                self._cmd.poutput(f"Step{i+1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+            if args.recent > len(self.put_steps.diff_list):
+                for i in range(len(self.put_steps.diff_list)):
+                    self._cmd.poutput(
+                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
+            else:
+                for i in range(
+                        len(self.put_steps.diff_list) - args.recent, len(self.put_steps.diff_list)
+                ):
+                    self._cmd.poutput(
+                        f"Step{i + 1}:{self.put_steps[i].time} ({self.put_steps[i].row},{self.put_steps[i].col}) {self.put_steps[i].before_val}->{self.put_steps[i].after_val}")
 
     @with_argparser(step_revert_parser)
     def do_step_revert(self, args):
