@@ -37,9 +37,9 @@ sh -c               # using alias
 
 ## Commands Help
 
-All commands in this program are well-documented. Run `help [command_name]` or `[command_name] help` to check deteild help message for a certain command.
+All commands in this program are well-documented. Run `help [command_name]` or `[command_name] --help` to check detailed help message for a certain command.
 
-For example, for help text or put command, you could run one of the following command:
+For example, to check help message of `put` command, you could run one of the following command:
 
 ```shell
 help put
@@ -49,5 +49,9 @@ p -h
 ```
 
 There are lots of other useful commands that we could not fully covered in this simple guide, please using the `help` command to check out those wonderful commands yourself.
+
+Also, we provided several docs for this program, run `doc -h` to learn more info.
+
+-----
 
 That's all for this introductions, have a good time, you may want to use `newgame` to start a new game now!

@@ -38,17 +38,17 @@ from cli.category import get_category_str
 from tools.cmd2_rich_mixin import RichCmd
 
 
-startup_info_backup = """
-[bold]Sudoku CLI[/bold]
-Author: Yujia, Ruofan, [blue]AHU, Software Engineering[/blue]
+# startup_info_backup = """
+# [bold]Sudoku CLI[/bold]
+# Author: Yujia, Ruofan, [blue]AHU, Software Engineering[/blue]
 
-[bold]Thanks:[/bold]
-> [bold blue]sudokutools[/bold blue] Sudoku basic algorithm support in Python.
-> [bold blue]cmd2[/bold blue] Tools to create CLI with Python.
----------------------------------------------------
-Run [bold green]help[/bold green] to check all available commands.
-Run [bold blue]newgame[/bold blue] to start a new game!
-"""
+# [bold]Thanks:[/bold]
+# > [bold blue]sudokutools[/bold blue] Sudoku basic algorithm support in Python.
+# > [bold blue]cmd2[/bold blue] Tools to create CLI with Python.
+# ---------------------------------------------------
+# Run [bold green]help[/bold green] to check all available commands.
+# Run [bold blue]newgame[/bold blue] to start a new game!
+# """
 
 
 class SudokuCLIApplication(RichCmd, cmd2.Cmd):

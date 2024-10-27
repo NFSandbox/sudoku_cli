@@ -65,8 +65,9 @@ home_page_info = """
 
 ## Documentations & Helps
 
-- Run `help` to check all available commands. _(`help -v` for detailed info)_
 - Run `doc intro` to view the basic introductions.
+- Run `help` to check all available commands. _(`help -v` for detailed info)_
+- **For any command, run `[command] -h` to view the help message of that command, MAKE USE OF `-h`!**
 
 # Start Your Journey
 
@@ -125,7 +126,16 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Rich markup style for filled sudoku grids.
         """
+        self.allow_conflict_put: bool = True
+        """
+        If a put operation is allowed even if it could cause conflicts
+        """
+
         self.start_time: datetime = datetime.now(UTC)
+        """
+        Record the start time of the latest game
+        """
+
         self._reset_start_time()
 
         self.put_callbacks = CallbackManager[
@@ -168,6 +178,14 @@ class SudokuCLI(cmd2.CommandSet):
                     self,
                 )
             )
+        self.add_settable(
+            Settable(
+                "allow_conflict_put",
+                bool,
+                "Allow put operation that could cause conflict",
+                self,
+            )
+        )
 
         # categorize command
         cmd2.categorize(self.do_cls, get_category_str("System"))
@@ -522,7 +540,23 @@ class SudokuCLI(cmd2.CommandSet):
             self._cmd.poutput("[yellow]Do not change the generated grid[/yellow]")
             return
 
+        _prev = self.sudoku[row - 1, col - 1]
         self.sudoku[row - 1, col - 1] = val
+
+        # check if conflict if necessary
+        conflicts = find_conflicts(self.sudoku)
+        has_conflict = False
+        for c in conflicts:
+            has_conflict = True
+            break
+        if has_conflict and self.allow_conflict_put == False:
+            self._cmd.pwarning(
+                "Put operation invalid since it would cause conflict. "
+                "To allow put operation which will cause conflict, "
+                'run "set allow_conflict_put True"'
+            )
+            self.sudoku[row - 1, col - 1] = _prev
+            return
 
         self.do_show("")
         self.do_check("")

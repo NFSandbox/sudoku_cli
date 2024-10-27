@@ -127,6 +127,9 @@ class StepCLI(cmd2.CommandSet):
 
     @with_argparser(step_parser)
     def do_step(self, args):
+        """
+        Step tracing and revert related operations
+        """
         # check sub command
         func = getattr(args, "func", None)
         if func is not None:

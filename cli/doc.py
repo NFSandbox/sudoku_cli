@@ -24,6 +24,7 @@ doc_name_file_mapping = {
     "advance": "./docs/advanced_tutorial.md",
     "output_redirect": "./docs/output_redirecting.md",
     "customize": "./docs/game_customize.md",
+    "step": "./docs/step_operations.md",
 }
 
 

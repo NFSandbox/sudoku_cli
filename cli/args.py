@@ -70,6 +70,10 @@ class CustomArgumentParser(Cmd2ArgumentParser):
 # args for newgame
 newgame_args = CustomArgumentParser(
     formatter_class=ArgumentDefaultsHelpFormatter,
+    epilog="""
+    For guide on how to use this command to customize your new game, 
+    run "doc customize".
+    """,
 )
 newgame_help_text = """
 Set the difficultly of the newly generated game. Should be a float number between 0 and 1, 
@@ -190,16 +194,20 @@ _loadgame_import_source_mutex_arg.add_argument(
 
 doc_args = CustomArgumentParser()
 doc_help_text = """
-The name of the documentation you want to see.
+The name of the documentation you want to read.
 
 - intro:             The basic introduction of this program and the sudoku game.
 - advance:           Advance usages of this program.
 - output_redirect:   Guide on how to use output redirection with this program.
+- customize:         Guide on how to customize your newgame.
+- step:              Guide on how to make use of the step tracking functionalities.
 """
 doc_args.add_argument(
     "doc_name",
     help=doc_help_text,
-    choices=["intro", "advance", "output_redirect", "customize"],
+    choices=["intro", "advance", "output_redirect", "customize", "step"],
+    default="intro",
+    nargs="?",
 )
 
 
@@ -211,7 +219,12 @@ state_args.add_argument(
     help="Show more information of the current state of the sudoku game",
 )
 
-step_parser = CustomArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+step_parser = CustomArgumentParser(
+    formatter_class=ArgumentDefaultsHelpFormatter,
+    epilog="""
+    For guide on how to use this command, you could run "doc step".
+    """,
+)
 step_sub_parser = step_parser.add_subparsers(title="Step Operations")
 
 step_show_parser: CustomArgumentParser = step_sub_parser.add_parser(
