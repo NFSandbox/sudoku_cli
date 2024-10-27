@@ -226,6 +226,12 @@ step_show_parser.add_argument(
     type=int,
     default=10,
 )
+step_show_parser.add_argument(
+    "-s",
+    "--short",
+    help="Output the history in a short string format instead of visual grid",
+    action="store_true",
+)
 
 step_revert_parser: CustomArgumentParser = step_sub_parser.add_parser(
     "revert",

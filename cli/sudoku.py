@@ -21,7 +21,7 @@ from .args import *
 from .category import get_category_str
 from .model import SudokuCLIGameData
 from .step import StepCLI
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, UTC
 
 from exceptions import BaseError
 from tools.sudoku_view import (
@@ -125,7 +125,8 @@ class SudokuCLI(cmd2.CommandSet):
         """
         Rich markup style for filled sudoku grids.
         """
-        self.start_time: datetime = datetime.now()
+        self.start_time: datetime = datetime.now(UTC)
+        self._reset_start_time()
 
         self.put_callbacks = CallbackManager[
             [datetime, int, int, int, Sudoku],
@@ -143,6 +144,12 @@ class SudokuCLI(cmd2.CommandSet):
         - If a "put" opeartion is illegal and be interrputed, "after"
           signals will not be triggered.
         """
+
+        self.newgame_callbacks = CallbackManager[
+            [Sudoku, Sudoku],
+            Any,
+            Literal["after"],
+        ]()
 
         style_settables = {
             "init_style": "Rich markup style used to highlight generated grids in grids.",
@@ -174,6 +181,13 @@ class SudokuCLI(cmd2.CommandSet):
         self._cmd.onecmd_plus_hooks("cls")
         self._cmd.poutput(Markdown(home_page_info))
 
+    def _after_new_game_hook(self) -> None:
+        """
+        Do some after works after a new game is created or loaded.
+        """
+        self._reset_start_time()
+        self.newgame_callbacks.trigger_sync("after", self.init_sudoku, self.sudoku)
+
     @with_argparser(loadgame_args)
     def do_loadgame(self, args) -> None:
         """
@@ -204,6 +218,8 @@ class SudokuCLI(cmd2.CommandSet):
                     self._cmd.psuccess(
                         f"Game loaded from file '{file_name}' successfully!"
                     )
+                    self._after_new_game_hook()
+
             except Exception as e:
                 self._cmd.perror(f"Failed to load game from file {file_name}: {e}")
 
@@ -216,6 +232,8 @@ class SudokuCLI(cmd2.CommandSet):
                 self.sudoku = Sudoku.decode(game_string)
                 self.init_sudoku = deepcopy(self.sudoku)
                 self._cmd.psuccess("Game loaded from input string successfully!")
+                self._after_new_game_hook()
+
             except Exception as e:
                 self._cmd.perror(f"Failed to load game from string: {e}")
 
@@ -227,7 +245,7 @@ class SudokuCLI(cmd2.CommandSet):
         Create a new game
         """
         self.do_cls()
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(UTC)
         difficulty = args.difficulty
         template = args.template
         symmetry = args.symmetry
@@ -242,11 +260,12 @@ class SudokuCLI(cmd2.CommandSet):
                 template=template,
                 symmetry=symmetry,
             )
+
+            self._cmd.poutput("[green]New sudoku game generated![/green]")
+            self.do_show("-p")
+
         except SudokuGenerationError as e:
             self._cmd.perror(e)
-        else:
-            self._cmd.poutput("[green]New sudoku game generated![/green]")
-        self.do_show("-p")
 
     def create_new_game(
         self,
@@ -256,7 +275,7 @@ class SudokuCLI(cmd2.CommandSet):
         template: str | None = None,
     ):
         """
-        Create a new sudoku game.
+        Create a new sudoku game and reset the start time.
         """
         if template is not None:
             if difficulty is not None or symmetry is not None:
@@ -286,6 +305,7 @@ class SudokuCLI(cmd2.CommandSet):
             self.sudoku = generate(factor, symmetry=symmetry)
 
         self.init_sudoku = deepcopy(self.sudoku)
+        self._after_new_game_hook()
 
     @with_argparser(show_args)
     def do_show(self, args):
@@ -485,11 +505,11 @@ class SudokuCLI(cmd2.CommandSet):
         row = args.row
         col = args.column
         val = args.value
-        put_time = datetime.now()
+        put_time = datetime.now(UTC)
 
         try:
             self.put_callbacks.trigger_sync(
-                "before", put_time, row, col,self.init_sudoku[args.row - 1, args.column - 1] , self.sudoku
+                "before", put_time, row, col, self.sudoku[row - 1, col - 1], self.sudoku
             )
         except CallbackInterrupted as e:
             self._cmd.pfeedback(
@@ -498,11 +518,11 @@ class SudokuCLI(cmd2.CommandSet):
             return
 
         # check if this grid is an initial grid
-        if self.init_sudoku[args.row - 1, args.column - 1] != 0:
+        if self.init_sudoku[row - 1, col - 1] != 0:
             self._cmd.poutput("[yellow]Do not change the generated grid[/yellow]")
             return
 
-        self.sudoku[args.row - 1, args.column - 1] = args.value
+        self.sudoku[row - 1, col - 1] = val
 
         self.do_show("")
         self.do_check("")
@@ -523,3 +543,17 @@ class SudokuCLI(cmd2.CommandSet):
             init_sudoku=self.init_sudoku or None,  # type: ignore
         )
         return game_data
+
+    def _reset_start_time(self):
+        self.start_time = datetime.now(UTC)
+
+    def time_from_game_start(self, curr_time: datetime | None = None) -> timedelta:
+        """
+        Return a timedelta object, representing the duration between the game start
+        and another specific time.
+        """
+        if curr_time is None:
+            curr_time = datetime.now(UTC)
+
+        time_diff = curr_time - self.start_time
+        return time_diff

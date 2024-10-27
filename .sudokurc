@@ -10,3 +10,6 @@ alias create al alias list
 alias create p put
 alias create c check
 alias create l loadgame
+alias create ss step show
+alias create sss step show -s
+alias create sr step revert
