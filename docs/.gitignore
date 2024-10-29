@@ -1,3 +1,4 @@
 # ignore reference doc and generated report
 /ref*.docx
-/report.docx
+/*.docx
+/*.pdf
