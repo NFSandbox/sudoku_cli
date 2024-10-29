@@ -180,3 +180,6 @@ oryx-build-*
 
 # ignore sudoku game file
 /game.json
+
+# ignore generated git archive
+/release.zip
